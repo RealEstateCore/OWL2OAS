@@ -22,7 +22,7 @@ namespace OWL2OAS
             // Create OAS Info header
             OASDocument.Info info = new OASDocument.Info();
             info.title = "RealEstateCore API";
-            info.version = "\"3.1\"";
+            info.version = "3.1";
             OASDocument.License license = new OASDocument.License();
             license.name = "MIT";
             info.license = license;
@@ -56,6 +56,13 @@ namespace OWL2OAS
                 OASDocument.Response response = new OASDocument.Response();
                 response.description = "A paged array of '" + classLabel + "' objects.";
                 path.get.responses.Add("200", response);
+
+                response.content = new Dictionary<string, OASDocument.Content>();
+                OASDocument.Content content = new OASDocument.Content();
+                response.content.Add("application/jsonld", content);
+
+                content.schema = new Dictionary<string, string>();
+                content.schema.Add("$ref", "#/components/schemas/" + classLabel);
             }
             document.components.schemas = schemas;
             document.paths = paths;
@@ -82,7 +89,7 @@ namespace OWL2OAS
             {
                 if (label.Language == language)
                 {
-                    return label.Value;
+                    return label.Value.Replace(" ", "");
                 }
             }
             return ontologyResource.Resource.ToString();
