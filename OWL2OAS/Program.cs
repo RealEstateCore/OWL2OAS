@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using VDS.RDF;
 using VDS.RDF.Ontology;
 using VDS.RDF.Parsing;
 using YamlDotNet.Serialization;
@@ -30,8 +31,9 @@ namespace OWL2OAS
             Dictionary<string, OASDocument.Schema> schemas = new Dictionary<string, OASDocument.Schema>();
             foreach (OntologyClass c in g.OwlClasses)
             {
+                string classLabel = GetLabel(c, "en");
                 OASDocument.Schema schema = new OASDocument.Schema();
-                schemas.Add(c.ToString(), schema);
+                schemas.Add(classLabel, schema);
             }
             components.schemas = schemas;
             document.components = components;
@@ -39,16 +41,17 @@ namespace OWL2OAS
             Dictionary<string, OASDocument.Path> paths = new Dictionary<string, OASDocument.Path>();
             foreach (OntologyClass c in g.OwlClasses)
             {
+                string classLabel = GetLabel(c, "en");
                 OASDocument.Path path = new OASDocument.Path();
                 OASDocument.Get get = new OASDocument.Get();
                 Dictionary<string, OASDocument.Response> responses = new Dictionary<string, OASDocument.Response>();
                 OASDocument.Response response = new OASDocument.Response();
-                response.description = "A paged array of '" + c.ToString() + "' objects.";
+                response.description = "A paged array of '" + classLabel + "' objects.";
                 responses.Add("200", response);
-                get.summary = "Get all '" + c.ToString() + "' objects.";
+                get.summary = "Get all '" + classLabel + "' objects.";
                 get.responses = responses;
                 path.get = get;
-                paths.Add("/" + c.ToString(), path);
+                paths.Add("/" + classLabel, path);
             }
             document.paths = paths;
 
@@ -66,6 +69,18 @@ namespace OWL2OAS
             stringBuilder.AppendLine(serializer.Serialize(data));
             Console.WriteLine(stringBuilder);
             Console.WriteLine("");
+        }
+
+        private static string GetLabel(OntologyResource ontologyResource, string language)
+        {
+            foreach (ILiteralNode label in ontologyResource.Label)
+            {
+                if (label.Language == language)
+                {
+                    return label.Value;
+                }
+            }
+            return ontologyResource.Resource.ToString();
         }
     }
 }
