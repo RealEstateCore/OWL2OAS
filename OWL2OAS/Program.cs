@@ -19,6 +19,7 @@ namespace OWL2OAS
             // Create OAS object
             OASDocument document = new OASDocument();
 
+            // Create OAS Info header
             OASDocument.Info info = new OASDocument.Info();
             info.title = "RealEstateCore API";
             info.version = "\"3.1\"";
@@ -27,32 +28,36 @@ namespace OWL2OAS
             info.license = license;
             document.info = info;
 
-            OASDocument.Components components = new OASDocument.Components();
+            // Parse OWL classes. For each class, create a schema and a path
+            document.components = new OASDocument.Components();
             Dictionary<string, OASDocument.Schema> schemas = new Dictionary<string, OASDocument.Schema>();
-            foreach (OntologyClass c in g.OwlClasses)
-            {
-                string classLabel = GetLabel(c, "en");
-                OASDocument.Schema schema = new OASDocument.Schema();
-                schemas.Add(classLabel, schema);
-            }
-            components.schemas = schemas;
-            document.components = components;
-
             Dictionary<string, OASDocument.Path> paths = new Dictionary<string, OASDocument.Path>();
             foreach (OntologyClass c in g.OwlClasses)
             {
+                // Get human-readable label for API (should this be fetched from other metadata property?)
+                // TODO: pluralization metadata for clean API?
                 string classLabel = GetLabel(c, "en");
+
+                // Create schema for class
+                OASDocument.Schema schema = new OASDocument.Schema();
+                schemas.Add(classLabel, schema);
+
+                // Create path for class
                 OASDocument.Path path = new OASDocument.Path();
-                OASDocument.Get get = new OASDocument.Get();
-                Dictionary<string, OASDocument.Response> responses = new Dictionary<string, OASDocument.Response>();
+                paths.Add("/" + classLabel, path);
+
+                // Create each of the HTTP methods
+                // TODO: PUT, PATCH, etc
+                path.get = new OASDocument.Get();
+                path.get.summary = "Get all '" + classLabel + "' objects.";
+                path.get.responses = new Dictionary<string, OASDocument.Response>();
+                
+                // Create each of the HTTP response types
                 OASDocument.Response response = new OASDocument.Response();
                 response.description = "A paged array of '" + classLabel + "' objects.";
-                responses.Add("200", response);
-                get.summary = "Get all '" + classLabel + "' objects.";
-                get.responses = responses;
-                path.get = get;
-                paths.Add("/" + classLabel, path);
+                path.get.responses.Add("200", response);
             }
+            document.components.schemas = schemas;
             document.paths = paths;
 
             DumpAsYaml(document);
