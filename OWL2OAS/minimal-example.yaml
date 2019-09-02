@@ -1,0 +1,17 @@
+openapi: 3.0.0
+info:
+  version: "3.1"
+  title: RealEstateCore API
+  license:
+    name: MIT
+paths:
+  /geometry:
+    get:
+      summary: List all geometries
+      responses:
+        '200': 
+          description: A paged array of geometries
+components:
+  schemas:
+    Geometry:
+      type: object
