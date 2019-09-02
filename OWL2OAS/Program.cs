@@ -36,6 +36,22 @@ namespace OWL2OAS
             components.schemas = schemas;
             document.components = components;
 
+            Dictionary<string, OASDocument.Path> paths = new Dictionary<string, OASDocument.Path>();
+            foreach (OntologyClass c in g.OwlClasses)
+            {
+                OASDocument.Path path = new OASDocument.Path();
+                OASDocument.Get get = new OASDocument.Get();
+                Dictionary<string, OASDocument.Response> responses = new Dictionary<string, OASDocument.Response>();
+                OASDocument.Response response = new OASDocument.Response();
+                response.description = "A paged array of '" + c.ToString() + "' objects.";
+                responses.Add("200", response);
+                get.summary = "Get all '" + c.ToString() + "' objects.";
+                get.responses = responses;
+                path.get = get;
+                paths.Add("/" + c.ToString(), path);
+            }
+            document.paths = paths;
+
             DumpAsYaml(document);
             
             // Keep window open during debug

@@ -10,7 +10,7 @@ namespace OWL2OAS
         public string openapi { get { return "3.0.0"; } }
         public Info info { get; set; }
         public Components components { get; set; }
-        public Paths paths { get; set; }
+        public Dictionary<string, Path> paths { get; set; }
 
         public struct Info
         {
@@ -28,16 +28,26 @@ namespace OWL2OAS
         {
             public Dictionary<string, Schema> schemas { get; set; }
         }
-
         
         public class Schema
         {
             public string type { get { return "object";  } }
         }
 
-        public class Paths
+        public class Path
         {
-            public Paths[] paths;
+            public Get get { get; set; }
+        }
+
+        public class Get
+        {
+            public string summary;
+            public Dictionary<string, Response> responses { get; set; }
+        }
+
+        public class Response
+        {
+            public string description { get; set; }
         }
     }
 }
