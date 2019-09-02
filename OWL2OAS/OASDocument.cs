@@ -19,22 +19,23 @@ namespace OWL2OAS
             public License license;
         }
 
-        public struct License
+        public class License
         {
             public string name;
         }
 
-        public struct Components
+        public class Components
         {
-            public List<Schema> schemas;
-        }
-      
-        public struct Schema
-        {
-            public string title;
+            public Dictionary<string, Schema> schemas { get; set; }
         }
 
-        public struct Paths
+        
+        public class Schema
+        {
+            public string type { get { return "object";  } }
+        }
+
+        public class Paths
         {
             public Paths[] paths;
         }

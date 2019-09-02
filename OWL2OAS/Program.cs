@@ -27,12 +27,11 @@ namespace OWL2OAS
             document.info = info;
 
             OASDocument.Components components = new OASDocument.Components();
-            List<OASDocument.Schema> schemas = new List<OASDocument.Schema>();
+            Dictionary<string, OASDocument.Schema> schemas = new Dictionary<string, OASDocument.Schema>();
             foreach (OntologyClass c in g.OwlClasses)
             {
                 OASDocument.Schema schema = new OASDocument.Schema();
-                schema.title = c.ToString();
-                schemas.Add(schema);
+                schemas.Add(c.ToString(), schema);
             }
             components.schemas = schemas;
             document.components = components;
@@ -46,7 +45,6 @@ namespace OWL2OAS
 
         private static void DumpAsYaml(object data)
         {
-            Console.WriteLine("***Dumping Object Using Yaml Serializer***");
             var stringBuilder = new StringBuilder();
             var serializer = new Serializer();
             stringBuilder.AppendLine(serializer.Serialize(data));
