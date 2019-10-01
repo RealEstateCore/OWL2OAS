@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using VDS.RDF;
 using VDS.RDF.Ontology;
@@ -41,6 +42,23 @@ namespace OWL2OAS
 
                 // Create schema for class
                 OASDocument.Schema schema = new OASDocument.Schema();
+
+                foreach (OntologyProperty property in c.IsDomainOf)
+                {
+                    // This is an extraordinarily convoluted way of checking for object property type. 
+                    if (property.isObjectProperty()) {
+                        //property.Ranges.fi
+                    }
+                }
+
+                schema.required = new List<string> { "id", "label" };
+                schema.properties = new Dictionary<string, OASDocument.Property>();
+                OASDocument.Property idProperty = new OASDocument.Property();
+                idProperty.type = "string";
+                schema.properties.Add("id", idProperty);
+                OASDocument.Property labelProperty = new OASDocument.Property();
+                labelProperty.type = "string";
+                schema.properties.Add("label", labelProperty);
                 schemas.Add(classLabel, schema);
 
                 // Create path for class

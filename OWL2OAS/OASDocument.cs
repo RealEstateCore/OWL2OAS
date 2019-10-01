@@ -34,6 +34,14 @@ namespace OWL2OAS
         public class Schema
         {
             public string type { get { return "object";  } }
+            public List<string> required;
+            public Dictionary<string, Property> properties;
+        }
+
+        public class Property
+        {
+            public string type;
+            public string format;
         }
 
         public class Path
