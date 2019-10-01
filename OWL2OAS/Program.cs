@@ -43,22 +43,26 @@ namespace OWL2OAS
                 // Create schema for class
                 OASDocument.Schema schema = new OASDocument.Schema();
 
+                
+                schema.properties = new Dictionary<string, OASDocument.Property>();
                 foreach (OntologyProperty property in c.IsDomainOf)
                 {
                     // This is an extraordinarily convoluted way of checking for object property type. 
-                    if (property.IsObjectProperty()) {
+                    if (property.IsDataProperty()) {
+                        OASDocument.Property outputProperty = new OASDocument.Property();
+                        outputProperty.type = property.GetDataRange().Fragment;
+                        schema.properties.Add(((UriNode)property.Resource).Uri.Fragment, outputProperty);
                         //property.Ranges.fi
                     }
                 }
+                schema.required = new List<string>(schema.properties.Keys);
 
-                schema.required = new List<string> { "id", "label" };
-                schema.properties = new Dictionary<string, OASDocument.Property>();
-                OASDocument.Property idProperty = new OASDocument.Property();
+                /*OASDocument.Property idProperty = new OASDocument.Property();
                 idProperty.type = "string";
                 schema.properties.Add("id", idProperty);
                 OASDocument.Property labelProperty = new OASDocument.Property();
                 labelProperty.type = "string";
-                schema.properties.Add("label", labelProperty);
+                schema.properties.Add("label", labelProperty);*/
                 schemas.Add(classLabel, schema);
 
                 // Create path for class
