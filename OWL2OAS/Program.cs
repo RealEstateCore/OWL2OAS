@@ -46,7 +46,7 @@ namespace OWL2OAS
                 foreach (OntologyProperty property in c.IsDomainOf)
                 {
                     // This is an extraordinarily convoluted way of checking for object property type. 
-                    if (property.isObjectProperty()) {
+                    if (property.IsObjectProperty()) {
                         //property.Ranges.fi
                     }
                 }
