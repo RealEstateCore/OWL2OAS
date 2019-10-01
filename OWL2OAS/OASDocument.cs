@@ -41,10 +41,15 @@ namespace OWL2OAS
             public Get get { get; set; }
         }
 
-        public class Get
+        public class Verb
         {
             public string summary;
             public Dictionary<string, Response> responses { get; set; }
+        }
+
+        public class Get: Verb
+        {
+            
         }
 
         public class Response

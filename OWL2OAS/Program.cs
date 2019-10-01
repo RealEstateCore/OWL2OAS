@@ -14,7 +14,8 @@ namespace OWL2OAS
         {
             // Load ontology graph
             OntologyGraph g = new OntologyGraph();
-            FileLoader.Load(g, args[0]);
+            //FileLoader.Load(g, args[0]);
+            EmbeddedResourceLoader.Load(g, "OWL2OAS.rec-core.rdf, OWL2OAS");
 
             // Create OAS object
             OASDocument document = new OASDocument();
@@ -68,10 +69,6 @@ namespace OWL2OAS
             document.paths = paths;
 
             DumpAsYaml(document);
-            
-            // Keep window open during debug
-            Console.WriteLine("Press any key to quit.");
-            Console.ReadKey();
         }
 
         private static void DumpAsYaml(object data)
