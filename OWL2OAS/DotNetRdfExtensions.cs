@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using VDS.RDF;
@@ -25,23 +26,30 @@ namespace OWL2OAS
             return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.Equals(OntologyHelper.OwlAnnotationProperty)).Any();
         }
 
-        // TODO: The below check isn't really right, is it?
-        public static bool IsDatatype(this OntologyClass oClass)
+        public static bool IsRdfsDatatype(this OntologyClass oClass)
+        {
+            return oClass.Types.Where(classType => classType.NodeType == NodeType.Uri).Where(classType => ((UriNode)classType).Uri.Equals("http://www.w3.org/2000/01/rdf-schema#Datatype")).Any();
+        }
+
+        public static bool IsXsdDatatype(this OntologyClass oClass)
         {
             if (oClass.Resource.NodeType.Equals(NodeType.Uri))
             {
-                if (((UriNode)oClass.Resource).Uri.ToString().Contains(XmlSpecsHelper.NamespaceXmlSchema))
-                {
-                    return true;
-                }
+                return (((UriNode)oClass.Resource).Uri.ToString().StartsWith(XmlSpecsHelper.NamespaceXmlSchema));
             }
             return false;
         }
 
-        // TODO: This is crap.
-        public static Uri GetDataRange(this OntologyProperty property)
+        public static string GetLocalName(this UriNode node)
         {
-            return property.Ranges.Where(range => range.IsDatatype()).Select(rangeClass => ((UriNode)rangeClass.Resource).Uri).DefaultIfEmpty(new Uri(RdfSpecsHelper.RdfXmlLiteral)).FirstOrDefault();
+            if (node.Uri.Fragment.Length > 0)
+            {
+                return node.Uri.Fragment.Trim('#');
+            }
+            else
+            {
+                return Path.GetFileName(node.Uri.AbsolutePath);
+            }
         }
     }
 }

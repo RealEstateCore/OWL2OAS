@@ -11,6 +11,23 @@ namespace OWL2OAS
 {
     class Program
     {
+        // Dictionary mapping some common XSD data types to corresponding OSA data types and formats, see
+        // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#dataTypeFormat
+        static readonly Dictionary<string, (string, string)> xsdOsaMappings = new Dictionary<string, (string, string)>
+        {
+            {"boolean",("boolean","") },
+            {"byte",("string","byte") },
+            {"base64Binary",("string","byte") },
+            {"dateTime",("string","date-time") },
+            {"dateTimeStamp",("string","date-time") },
+            {"double",("number","double") },
+            {"float",("number","float") },
+            {"int",("integer","int32") },
+            {"integer",("integer","int32") },
+            {"long",("integer","int64") },
+            {"string",("string","") },
+        };
+
         static void Main(string[] args)
         {
             // Load ontology graph
@@ -34,7 +51,9 @@ namespace OWL2OAS
             document.components = new OASDocument.Components();
             Dictionary<string, OASDocument.Schema> schemas = new Dictionary<string, OASDocument.Schema>();
             Dictionary<string, OASDocument.Path> paths = new Dictionary<string, OASDocument.Path>();
-            foreach (OntologyClass c in g.OwlClasses)
+
+            // Iterate over all leaf classes
+            foreach (OntologyClass c in g.OwlClasses.Where(oClass => oClass.IsBottomClass))
             {
                 // Get human-readable label for API (should this be fetched from other metadata property?)
                 // TODO: pluralization metadata for clean API?
@@ -43,26 +62,52 @@ namespace OWL2OAS
                 // Create schema for class
                 OASDocument.Schema schema = new OASDocument.Schema();
 
-                
+                // TODO: parse superclasses for any restrictions defining max/min constraints, to be used inside loop
                 schema.properties = new Dictionary<string, OASDocument.Property>();
-                foreach (OntologyProperty property in c.IsDomainOf)
-                {
-                    // This is an extraordinarily convoluted way of checking for object property type. 
-                    if (property.IsDataProperty()) {
-                        OASDocument.Property outputProperty = new OASDocument.Property();
-                        outputProperty.type = property.GetDataRange().Fragment;
-                        schema.properties.Add(((UriNode)property.Resource).Uri.Fragment, outputProperty);
-                        //property.Ranges.fi
-                    }
-                }
-                schema.required = new List<string>(schema.properties.Keys);
 
-                /*OASDocument.Property idProperty = new OASDocument.Property();
+                // Add id and label for all entries
+                OASDocument.Property idProperty = new OASDocument.Property();
                 idProperty.type = "string";
                 schema.properties.Add("id", idProperty);
                 OASDocument.Property labelProperty = new OASDocument.Property();
                 labelProperty.type = "string";
-                schema.properties.Add("label", labelProperty);*/
+                schema.properties.Add("label", labelProperty);
+
+                foreach (OntologyProperty property in c.IsDomainOf)
+                {
+                    // We only process (named) object and data properties with singleton ranges.
+                    if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1) {
+
+                        OASDocument.Property outputProperty = new OASDocument.Property();
+                        string propertyLocalName = ((UriNode)property.Resource).GetLocalName();
+
+                        // Default to string representation for unknown types
+                        outputProperty.type = "string";
+
+                        if (property.Ranges.First().IsXsdDatatype())
+                        {
+                            // Parse XSD type into OAS type and format
+                            string rangeXsdType = ((UriNode)property.Ranges.First().Resource).GetLocalName();
+
+                            // Look through well-known XSD type mapping (note: not all XSD types are covered)
+                            if (xsdOsaMappings.ContainsKey(rangeXsdType))
+                            {
+                                outputProperty.type = xsdOsaMappings[rangeXsdType].Item1;
+                                string format = xsdOsaMappings[rangeXsdType].Item2;
+                                if (format.Length > 0) {
+                                    outputProperty.format = format;
+                                }
+                            }
+                        }
+
+                        // TODO: add max/min constraints here
+                        schema.properties.Add(propertyLocalName, outputProperty);
+                    }
+                }
+                // TODO: figure out which properties that have min 1 constraint; use to populate below
+                schema.required = new List<string> { "id" };
+
+                /**/
                 schemas.Add(classLabel, schema);
 
                 // Create path for class
