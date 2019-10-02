@@ -53,11 +53,11 @@ namespace OWL2OAS
             Dictionary<string, OASDocument.Path> paths = new Dictionary<string, OASDocument.Path>();
 
             // Iterate over all leaf classes
-            foreach (OntologyClass c in g.OwlClasses.Where(oClass => oClass.IsBottomClass))
+            foreach (OntologyClass c in g.OwlClasses.Where(oClass => oClass.IsNamed()))
             {
                 // Get human-readable label for API (should this be fetched from other metadata property?)
                 // TODO: pluralization metadata for clean API?
-                string classLabel = GetLabel(c, "en");
+                string classLabel = c.GetLocalName();
 
                 // Create schema for class
                 OASDocument.Schema schema = new OASDocument.Schema();
@@ -81,11 +81,12 @@ namespace OWL2OAS
                         OASDocument.Property outputProperty = new OASDocument.Property();
                         string propertyLocalName = ((UriNode)property.Resource).GetLocalName();
 
-                        // Default to string representation for unknown types
-                        outputProperty.type = "string";
-
-                        if (property.Ranges.First().IsXsdDatatype())
+                        // If this is a data property with an XSD datatype range
+                        if (property.IsDataProperty() && property.Ranges.First().IsXsdDatatype())
                         {
+                            // Fall back to string representation for unknown types
+                            outputProperty.type = "string";
+
                             // Parse XSD type into OAS type and format
                             string rangeXsdType = ((UriNode)property.Ranges.First().Resource).GetLocalName();
 
@@ -97,6 +98,23 @@ namespace OWL2OAS
                                 if (format.Length > 0) {
                                     outputProperty.format = format;
                                 }
+                            }
+                        }
+
+                        if (property.IsObjectProperty())
+                        {
+                            OntologyClass range = property.Ranges.First();
+                            if (range.IsNamed() && g.OwlClasses.Contains(range))
+                            {
+                                outputProperty.oneOf = new List<Dictionary<string, string>>();
+                                outputProperty.oneOf.Add(new Dictionary<string, string> { { "$ref", "#/components/schemas/" + range.GetLocalName() } });
+                                outputProperty.oneOf.Add(new Dictionary<string, string> { { "type", "string" }, { "format", "uri" } });
+                            }
+                            else
+                            {
+                                // Fall back to string representation for unknown types
+                                outputProperty.type = "string";
+                                outputProperty.format = "uri";
                             }
                         }
 
@@ -145,18 +163,6 @@ namespace OWL2OAS
             stringBuilder.AppendLine(serializer.Serialize(data));
             Console.WriteLine(stringBuilder);
             Console.WriteLine("");
-        }
-
-        private static string GetLabel(OntologyResource ontologyResource, string language)
-        {
-            foreach (ILiteralNode label in ontologyResource.Label)
-            {
-                if (label.Language == language)
-                {
-                    return label.Value.Replace(" ", "");
-                }
-            }
-            return ontologyResource.Resource.ToString();
         }
     }
 }

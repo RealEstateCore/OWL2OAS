@@ -42,6 +42,7 @@ namespace OWL2OAS
         {
             public string type;
             public string format;
+            public List<Dictionary<string, string>> oneOf;
         }
 
         public class Path

@@ -31,6 +31,11 @@ namespace OWL2OAS
             return oClass.Types.Where(classType => classType.NodeType == NodeType.Uri).Where(classType => ((UriNode)classType).Uri.Equals("http://www.w3.org/2000/01/rdf-schema#Datatype")).Any();
         }
 
+        public static bool IsNamed(this OntologyResource resource)
+        {
+            return resource.Resource.NodeType.Equals(NodeType.Uri);
+        }
+
         public static bool IsXsdDatatype(this OntologyClass oClass)
         {
             if (oClass.Resource.NodeType.Equals(NodeType.Uri))
@@ -49,6 +54,18 @@ namespace OWL2OAS
             else
             {
                 return Path.GetFileName(node.Uri.AbsolutePath);
+            }
+        }
+
+        public static string GetLocalName(this OntologyResource resource)
+        {
+            if (resource.Resource.NodeType.Equals(NodeType.Uri))
+            {
+                return ((UriNode)resource.Resource).GetLocalName();
+            }
+            else
+            { 
+                throw new RdfException(String.Format("{0} is not backed by a named URI node.", resource));
             }
         }
     }
