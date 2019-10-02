@@ -45,14 +45,35 @@ namespace OWL2OAS
             OASDocument document = new OASDocument();
 
             // Create OAS Info header
-            OASDocument.Info info = new OASDocument.Info();
+            document.info = new OASDocument.Info();
+            // Parse mandatory components (label, version info).
+            if (rootOntology.Label.Any())
+            {
+                document.info.title = rootOntology.Label.OrderBy(label => label.HasLanguage()).First().Value;
+            }
+            else
+            {
+                throw new RdfException(string.Format("Ontology <{0}> does not have an <rdfs:label> annotation.", rootOntology));
+            }
+            if (rootOntology.VersionInfo.Any())
+            {
+                document.info.version = rootOntology.VersionInfo.OrderBy(versionInfo => versionInfo.HasLanguage()).First().Value;
+            }
+            else
+            {
+                throw new RdfException(string.Format("Ontology <{0}> does not have an <owl:versionInfo> annotation.", rootOntology));
+            }
             
-            info.title = "RealEstateCore API";
-            info.version = "3.1";
             OASDocument.License license = new OASDocument.License();
             license.name = "MIT";
-            info.license = license;
-            document.info = info;
+            document.info.license = license;
+
+            // Non-mandatory info components, e.g., rdfs:comment
+            if (rootOntology.Comment.Any())
+            {
+                string ontologyComment = rootOntology.Comment.OrderBy(comment => comment.HasLanguage()).First().Value.Trim().Replace("\r\n","\n").Replace("\n", "<br/>");
+                document.info.description = string.Format("The documentation below is automatically extracted from an <rdfs:comment> annotation on the ontology {0}:<br/><br/>*{1}*", rootOntology, ontologyComment);
+            }
 
             // Parse OWL classes. For each class, create a schema and a path
             document.components = new OASDocument.Components();

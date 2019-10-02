@@ -36,6 +36,16 @@ namespace OWL2OAS
             return resource.Resource.NodeType.Equals(NodeType.Uri);
         }
 
+        public static bool IsEnglish(this ILiteralNode node)
+        {
+            return (node.Language.Equals("en") || node.Language.StartsWith("en-"));
+        }
+
+        public static bool HasLanguage(this ILiteralNode node)
+        {
+            return (!node.Language.Equals(String.Empty));
+        }
+
         public static bool IsXsdDatatype(this OntologyClass oClass)
         {
             if (oClass.Resource.NodeType.Equals(NodeType.Uri))
@@ -45,7 +55,7 @@ namespace OWL2OAS
             return false;
         }
 
-        public static string GetLocalName(this UriNode node)
+        public static string GetLocalName(this IUriNode node)
         {
             if (node.Uri.Fragment.Length > 0)
             {

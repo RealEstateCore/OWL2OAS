@@ -7,14 +7,10 @@
 
   <ItemGroup>
     <None Remove="rec-core-3.0.rdf" />
-    <None Remove="rec-core.rdf" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="rec-core-3.0.rdf" />
-    <EmbeddedResource Include="rec-core.rdf">
-      <CopyToOutputDirectory></CopyToOutputDirectory>
-    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
