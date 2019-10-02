@@ -33,13 +33,20 @@ namespace OWL2OAS
             // Load ontology graph
             OntologyGraph g = new OntologyGraph();
             //FileLoader.Load(g, args[0]);
-            EmbeddedResourceLoader.Load(g, "OWL2OAS.rec-core.rdf, OWL2OAS");
+            EmbeddedResourceLoader.Load(g, "OWL2OAS.rec-core-3.0.rdf, OWL2OAS");
+            IUriNode rootOntologyUriNode = g.CreateUriNode(g.BaseUri);
+            Ontology rootOntology = new Ontology(rootOntologyUriNode, g);
+            foreach (Ontology import in rootOntology.Imports)
+            {
+                LoadImport(import, g);
+            }
 
             // Create OAS object
             OASDocument document = new OASDocument();
 
             // Create OAS Info header
             OASDocument.Info info = new OASDocument.Info();
+            
             info.title = "RealEstateCore API";
             info.version = "3.1";
             OASDocument.License license = new OASDocument.License();
@@ -163,6 +170,41 @@ namespace OWL2OAS
             stringBuilder.AppendLine(serializer.Serialize(data));
             Console.WriteLine(stringBuilder);
             Console.WriteLine("");
+        }
+
+        private static void LoadImport(Ontology importedOntology, OntologyGraph g)
+        {
+            // Parse and load ontology from its URI
+            Uri importedOntologyUri = new Uri(importedOntology.Resource.ToString());
+            RdfXmlParser parser = new RdfXmlParser();
+            OntologyGraph importedOntologyGraph = new OntologyGraph();
+            try
+            {
+                UriLoader.Cache.Clear();
+                UriLoader.Load(importedOntologyGraph, importedOntologyUri, parser);
+            }
+            catch (RdfParseException e)
+            {
+                Console.Write(e.Message);
+                Console.Write(e.StackTrace);
+            }
+
+            // Fetch out the imported ontology's self-described URI from the imported graph
+            // This may differ from the URI given by the importing ontology (from which the file was fetched),
+            // due to .htaccess redirects, version URIs, etc.
+            Uri importedOntologySelfDefinedUri = importedOntologyGraph.BaseUri;
+
+            // Merge imported graph with root ontology graph
+            g.Merge(importedOntologyGraph);
+
+            // Set up new ontology metadata object based on self-described imported URI
+            Ontology importedOntologyFromSelfDefinition = new Ontology(g.CreateUriNode(importedOntologySelfDefinedUri), g);
+
+            // Traverse import hierarchy
+            foreach (Ontology subImport in importedOntologyFromSelfDefinition.Imports)
+            {
+                LoadImport(subImport, g);
+            }
         }
     }
 }

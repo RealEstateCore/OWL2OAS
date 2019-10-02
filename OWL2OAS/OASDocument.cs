@@ -19,6 +19,7 @@ namespace OWL2OAS
             public string version { get; set; }
             public string title { get; set; }
             public License license { get; set; }
+            public string description;
         }
 
         public class License
