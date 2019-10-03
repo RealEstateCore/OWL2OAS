@@ -13,22 +13,22 @@ namespace OWL2OAS
     {
         public static bool IsDataProperty(this OntologyProperty property)
         {
-            return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.Equals(OntologyHelper.OwlDatatypeProperty)).Any();
+            return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.ToString().Equals(OntologyHelper.OwlDatatypeProperty)).Any();
         }
 
         public static bool IsObjectProperty(this OntologyProperty property)
         {
-            return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.Equals(OntologyHelper.OwlObjectProperty)).Any();
+            return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.ToString().Equals(OntologyHelper.OwlObjectProperty)).Any();
         }
 
         public static bool IsAnnotationProperty(this OntologyProperty property)
         {
-            return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.Equals(OntologyHelper.OwlAnnotationProperty)).Any();
+            return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.ToString().Equals(OntologyHelper.OwlAnnotationProperty)).Any();
         }
 
         public static bool IsRdfsDatatype(this OntologyClass oClass)
         {
-            return oClass.Types.Where(classType => classType.NodeType == NodeType.Uri).Where(classType => ((UriNode)classType).Uri.Equals("http://www.w3.org/2000/01/rdf-schema#Datatype")).Any();
+            return oClass.Types.Where(classType => classType.NodeType == NodeType.Uri).Where(classType => ((UriNode)classType).Uri.ToString().Equals("http://www.w3.org/2000/01/rdf-schema#Datatype")).Any();
         }
 
         public static bool IsNamed(this OntologyResource resource)
