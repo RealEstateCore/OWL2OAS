@@ -52,6 +52,7 @@ namespace OWL2OAS
             // Create OAS object
             OASDocument document = new OASDocument();
 
+            // TODO: Refactor, break out construction of info block into own method for clarity
             // Create OAS Info header
             document.info = new OASDocument.Info();
 
@@ -129,6 +130,7 @@ namespace OWL2OAS
                 labelProperty.type = "string";
                 schema.properties.Add("label", labelProperty);
 
+                // Todo: refactor, break out majority of the foor loop into own method for clarity
                 foreach (OntologyProperty property in c.IsDomainOf)
                 {
                     
