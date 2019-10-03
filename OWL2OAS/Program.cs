@@ -117,8 +117,11 @@ namespace OWL2OAS
                 {
                     if (superClass.IsRestriction())
                     {
-                        PropertyConstraint constraint = ExtractRestriction(superClass);
-                        constraints.Add(constraint.property, constraint);
+                        PropertyConstraint? constraint = ExtractRestriction(superClass);
+                        if (constraint.HasValue)
+                        {
+                            constraints.Add(constraint.Value.property, constraint.Value);
+                        }
                     }
                 }
 
@@ -224,13 +227,51 @@ namespace OWL2OAS
             Console.WriteLine("");
         }
 
-        private static PropertyConstraint ExtractRestriction(OntologyClass restriction)
+        private static PropertyConstraint? ExtractRestriction(OntologyClass restriction)
         {
-            // TODO: Implement this
-            PropertyConstraint pc = new PropertyConstraint();
-            pc.min = 1;
-            pc.max = 5;
-            return pc;
+            OntologyGraph graph = restriction.Graph as OntologyGraph;
+            IUriNode onProperty = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#onProperty"));
+            IUriNode cardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#cardinality"));
+            IUriNode someValuesFrom = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#someValuesFrom"));
+            IUriNode minCardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#minCardinality"));
+            IUriNode minQualifiedCardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#minQualifiedCardinality"));
+            IUriNode maxCardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#maxCardinality"));
+            IUriNode maxQualifiedCardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#maxQualifiedCardinality"));
+
+            if (restriction.GetNodesViaProperty(onProperty).UriNodes().Where(node => node.IsOntologyProperty()).Count() == 1)
+            {
+                PropertyConstraint pc = new PropertyConstraint();
+                IUriNode restrictionPropertyNode = restriction.GetNodesViaProperty(onProperty).UriNodes().Where(node => node.IsOntologyProperty()).First();
+                pc.property = graph.CreateOntologyProperty(restrictionPropertyNode);
+
+                if (restriction.GetNodesViaProperty(cardinality).LiteralNodes().Count() == 1 &&
+                    restriction.GetNodesViaProperty(cardinality).LiteralNodes().First().IsInteger())
+                {
+                    pc.exactly = int.Parse(restriction.GetNodesViaProperty(cardinality).LiteralNodes().First().Value);
+                    return pc;
+                }
+
+                if (restriction.GetNodesViaProperty(someValuesFrom).Count() == 1)
+                {
+                    pc.min = 1;
+                }
+
+                IEnumerable <INode> minCardinalities = restriction.GetNodesViaProperty(minCardinality).Union(restriction.GetNodesViaProperty(minQualifiedCardinality));
+                if (minCardinalities.LiteralNodes().Count() == 1 &&
+                    minCardinalities.LiteralNodes().First().IsInteger())
+                {
+                    pc.min = int.Parse(minCardinalities.LiteralNodes().First().Value);
+                }
+
+                IEnumerable<INode> maxCardinalities = restriction.GetNodesViaProperty(maxCardinality).Union(restriction.GetNodesViaProperty(maxQualifiedCardinality));
+                if (maxCardinalities.LiteralNodes().Count() == 1 &&
+                    maxCardinalities.LiteralNodes().First().IsInteger())
+                {
+                    pc.max = int.Parse(maxCardinalities.LiteralNodes().First().Value);
+                }
+                return pc;
+            }
+            return null;
         }
 
         private static void LoadImport(Ontology importedOntology, OntologyGraph g)

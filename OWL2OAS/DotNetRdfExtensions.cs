@@ -16,14 +16,43 @@ namespace OWL2OAS
             return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.ToString().Equals(OntologyHelper.OwlDatatypeProperty)).Any();
         }
 
+        public static bool IsDataProperty(this INode propertyNode)
+        {
+            IGraph graph = propertyNode.Graph;
+            IUriNode rdfType = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode dataProperty = graph.CreateUriNode(new Uri(OntologyHelper.OwlDatatypeProperty));
+            return graph.ContainsTriple(new Triple(propertyNode, rdfType, dataProperty));
+        }
+
         public static bool IsObjectProperty(this OntologyProperty property)
         {
             return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.ToString().Equals(OntologyHelper.OwlObjectProperty)).Any();
         }
 
+        public static bool IsObjectProperty(this INode propertyNode)
+        {
+            IGraph graph = propertyNode.Graph;
+            IUriNode rdfType = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode objectProperty = graph.CreateUriNode(new Uri(OntologyHelper.OwlObjectProperty));
+            return graph.ContainsTriple(new Triple(propertyNode, rdfType, objectProperty));
+        }
+
         public static bool IsAnnotationProperty(this OntologyProperty property)
         {
             return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.ToString().Equals(OntologyHelper.OwlAnnotationProperty)).Any();
+        }
+
+        public static bool IsAnnotationProperty(this INode propertyNode)
+        {
+            IGraph graph = propertyNode.Graph;
+            IUriNode rdfType = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode annotationProperty = graph.CreateUriNode(new Uri(OntologyHelper.OwlAnnotationProperty));
+            return graph.ContainsTriple(new Triple(propertyNode, rdfType, annotationProperty));
+        }
+
+        public static bool IsOntologyProperty(this INode node)
+        {
+            return node.IsAnnotationProperty() || node.IsDataProperty() || node.IsObjectProperty();
         }
 
         public static bool IsRdfsDatatype(this OntologyClass oClass)
@@ -59,6 +88,12 @@ namespace OWL2OAS
         public static bool HasLanguage(this ILiteralNode node)
         {
             return (!node.Language.Equals(String.Empty));
+        }
+
+        public static bool IsInteger(this ILiteralNode node)
+        {
+            string datatype = node.DataType.ToString();
+            return (datatype.Equals(XmlSpecsHelper.XmlSchemaDataTypeInt) || datatype.Equals(XmlSpecsHelper.XmlSchemaDataTypeInteger));
         }
 
         public static IEnumerable<INode> GetNodesViaProperty(this OntologyResource resource, INode property)
