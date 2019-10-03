@@ -46,27 +46,35 @@ namespace OWL2OAS
 
             // Create OAS Info header
             document.info = new OASDocument.Info();
-            // Parse mandatory components (label, version info).
-            if (rootOntology.Label.Any())
+
+            // Check for mandatory components (label, version info, cc:license).
+            if (!rootOntology.Label.Any())
             {
-                document.info.title = rootOntology.Label.OrderBy(label => label.HasLanguage()).First().Value;
+                throw new RdfException(string.Format("Ontology <{0}> does not have an <rdfs:label> annotation.", rootOntology));   
             }
-            else
-            {
-                throw new RdfException(string.Format("Ontology <{0}> does not have an <rdfs:label> annotation.", rootOntology));
-            }
-            if (rootOntology.VersionInfo.Any())
-            {
-                document.info.version = rootOntology.VersionInfo.OrderBy(versionInfo => versionInfo.HasLanguage()).First().Value;
-            }
-            else
+            if (!rootOntology.VersionInfo.Any())
             {
                 throw new RdfException(string.Format("Ontology <{0}> does not have an <owl:versionInfo> annotation.", rootOntology));
             }
-            
-            OASDocument.License license = new OASDocument.License();
-            license.name = "MIT";
-            document.info.license = license;
+            IUriNode ccLicense = g.CreateUriNode(new Uri("http://creativecommons.org/ns#license"));
+            if (!rootOntology.GetNodesViaProperty(ccLicense).Where(objNode => objNode.IsLiteral() || objNode.IsUri()).Any())
+            {
+                throw new RdfException(string.Format("Ontology <{0}> does not have an <cc:license> annotation that is a URI or literal.", rootOntology));
+            }
+
+            document.info.title = rootOntology.Label.OrderBy(label => label.HasLanguage()).First().Value;
+            document.info.version = rootOntology.VersionInfo.OrderBy(versionInfo => versionInfo.HasLanguage()).First().Value;
+            document.info.license = new OASDocument.License();
+            INode licenseNode = rootOntology.GetNodesViaProperty(ccLicense).OrderBy(node => node.NodeType).First();
+            if (licenseNode.IsUri())
+            {
+                document.info.license.name = ((UriNode)licenseNode).GetLocalName();
+                document.info.license.url = ((UriNode)licenseNode).Uri.ToString();
+            }
+            else
+            {
+                document.info.license.name = ((LiteralNode)licenseNode).Value;
+            }
 
             // Non-mandatory info components, e.g., rdfs:comment
             if (rootOntology.Comment.Any())

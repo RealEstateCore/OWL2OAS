@@ -36,6 +36,16 @@ namespace OWL2OAS
             return resource.Resource.NodeType.Equals(NodeType.Uri);
         }
 
+        public static bool IsLiteral(this INode node)
+        {
+            return node.NodeType.Equals(NodeType.Literal);
+        }
+
+        public static bool IsUri(this INode node)
+        {
+            return node.NodeType.Equals(NodeType.Uri);
+        }
+
         public static bool IsEnglish(this ILiteralNode node)
         {
             return (node.Language.Equals("en") || node.Language.StartsWith("en-"));
@@ -44,6 +54,11 @@ namespace OWL2OAS
         public static bool HasLanguage(this ILiteralNode node)
         {
             return (!node.Language.Equals(String.Empty));
+        }
+
+        public static IEnumerable<INode> GetNodesViaProperty(this OntologyResource resource, INode property)
+        {
+            return resource.Graph.GetTriplesWithSubjectPredicate(resource.Resource, property).Select(triple => triple.Object);
         }
 
         public static bool IsXsdDatatype(this OntologyClass oClass)

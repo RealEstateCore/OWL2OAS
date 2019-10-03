@@ -25,6 +25,7 @@ namespace OWL2OAS
         public class License
         {
             public string name;
+            public string url;
         }
 
         public class Components
