@@ -28,6 +28,14 @@ namespace OWL2OAS
             {"string",("string","") },
         };
 
+        public struct PropertyConstraint
+        {
+            public OntologyProperty property;
+            public int min;
+            public int max;
+            public int exactly;
+        }
+
         static void Main(string[] args)
         {
             // Load ontology graph
@@ -101,6 +109,18 @@ namespace OWL2OAS
                 // TODO: parse superclasses for any restrictions defining max/min constraints, to be used inside loop
                 schema.properties = new Dictionary<string, OASDocument.Property>();
 
+
+                // Iterate over superclasses, extract constraints
+                Dictionary<OntologyProperty, PropertyConstraint> constraints = new Dictionary<OntologyProperty, PropertyConstraint>();
+                foreach (OntologyClass superClass in c.DirectSuperClasses)
+                {
+                    if (superClass.IsRestriction())
+                    {
+                        PropertyConstraint constraint = ExtractRestriction(superClass);
+                        constraints.Add(constraint.property, constraint);
+                    }
+                }
+
                 // Add id and label for all entries
                 OASDocument.Property idProperty = new OASDocument.Property();
                 idProperty.type = "string";
@@ -111,6 +131,7 @@ namespace OWL2OAS
 
                 foreach (OntologyProperty property in c.IsDomainOf)
                 {
+                    
                     // We only process (named) object and data properties with singleton ranges.
                     if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1) {
 
@@ -120,6 +141,7 @@ namespace OWL2OAS
                         // If this is a data property with an XSD datatype range
                         if (property.IsDataProperty() && property.Ranges.First().IsXsdDatatype())
                         {
+
                             // Fall back to string representation for unknown types
                             outputProperty.type = "string";
 
@@ -161,7 +183,6 @@ namespace OWL2OAS
                 // TODO: figure out which properties that have min 1 constraint; use to populate below
                 schema.required = new List<string> { "id" };
 
-                /**/
                 schemas.Add(classLabel, schema);
 
                 // Create path for class
@@ -199,6 +220,15 @@ namespace OWL2OAS
             stringBuilder.AppendLine(serializer.Serialize(data));
             Console.WriteLine(stringBuilder);
             Console.WriteLine("");
+        }
+
+        private static PropertyConstraint ExtractRestriction(OntologyClass restriction)
+        {
+            // TODO: Implement this
+            PropertyConstraint pc = new PropertyConstraint();
+            pc.min = 1;
+            pc.max = 5;
+            return pc;
         }
 
         private static void LoadImport(Ontology importedOntology, OntologyGraph g)

@@ -31,6 +31,11 @@ namespace OWL2OAS
             return oClass.Types.Where(classType => classType.NodeType == NodeType.Uri).Where(classType => ((UriNode)classType).Uri.ToString().Equals("http://www.w3.org/2000/01/rdf-schema#Datatype")).Any();
         }
 
+        public static bool IsRestriction(this OntologyClass oClass)
+        {
+            return oClass.Types.Where(classType => classType.NodeType == NodeType.Uri).Where(classType => ((UriNode)classType).Uri.ToString().Equals("http://www.w3.org/2002/07/owl#Restriction")).Any();
+        }
+
         public static bool IsNamed(this OntologyResource resource)
         {
             return resource.Resource.NodeType.Equals(NodeType.Uri);
