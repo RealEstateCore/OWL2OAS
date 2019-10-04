@@ -43,16 +43,20 @@ namespace OWL2OAS
         public class ArrayProperty: Property
         {
             public new string type = "array";
-            public List<Property> items;
+            public Property items;
             public int maxItems;
             public int minItems;
+        }
+
+        public class UriProperty: Property
+        {
+            public List<Dictionary<string, string>> oneOf;
         }
 
         public class Property
         {
             public string type;
             public string format;
-            public List<Dictionary<string, string>> oneOf;
         }
 
         public class PropertyItems

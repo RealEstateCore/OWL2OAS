@@ -6,6 +6,7 @@ using VDS.RDF;
 using VDS.RDF.Ontology;
 using VDS.RDF.Parsing;
 using YamlDotNet.Serialization;
+using static OWL2OAS.OASDocument;
 
 namespace OWL2OAS
 {
@@ -34,6 +35,18 @@ namespace OWL2OAS
             public int min;
             public int max;
             public int exactly;
+            public bool AllowsMultiple()
+            {
+                return !MaxOne();
+            }
+            public bool MaxOne()
+            {
+                return (exactly == 1 || max == 1);
+            }
+            public bool IsRequired()
+            {
+                return (min == 1);
+            }
         }
 
         static void Main(string[] args)
@@ -136,19 +149,28 @@ namespace OWL2OAS
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
                 foreach (OntologyProperty property in c.IsDomainOf)
                 {
-                    
                     // We only process (named) object and data properties with singleton ranges.
                     if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1) {
 
-                        OASDocument.Property outputProperty = new OASDocument.Property();
+                        // Used to allocate property to schema.properties dictionary
                         string propertyLocalName = ((UriNode)property.Resource).GetLocalName();
+                        
+
+                        // Check if multiple values are allowed for this property. By default they are.
+                        bool propertyAllowsMultipleValues = true;
+                        if ((constraints.ContainsKey(property) && constraints[property].MaxOne()) || property.IsFunctional())
+                        {
+                            propertyAllowsMultipleValues = false;
+                        }
 
                         // If this is a data property with an XSD datatype range
                         if (property.IsDataProperty() && property.Ranges.First().IsXsdDatatype())
                         {
+                            // Set up the (possibly later on nested nested) property field
+                            OASDocument.Property dataProperty = new OASDocument.Property();
 
                             // Fall back to string representation for unknown types
-                            outputProperty.type = "string";
+                            dataProperty.type = "string";
 
                             // Parse XSD type into OAS type and format
                             string rangeXsdType = ((UriNode)property.Ranges.First().Resource).GetLocalName();
@@ -156,33 +178,58 @@ namespace OWL2OAS
                             // Look through well-known XSD type mapping (note: not all XSD types are covered)
                             if (xsdOsaMappings.ContainsKey(rangeXsdType))
                             {
-                                outputProperty.type = xsdOsaMappings[rangeXsdType].Item1;
+                                dataProperty.type = xsdOsaMappings[rangeXsdType].Item1;
                                 string format = xsdOsaMappings[rangeXsdType].Item2;
-                                if (format.Length > 0) {
-                                    outputProperty.format = format;
+                                if (format.Length > 0)
+                                {
+                                    dataProperty.format = format;
                                 }
                             }
+
+                            if (propertyAllowsMultipleValues)
+                            {
+                                OASDocument.ArrayProperty arrayProperty = new OASDocument.ArrayProperty();
+                                arrayProperty.items = dataProperty;
+                                // TODO: Get max/min/exact from constraint and apply here.
+                                schema.properties.Add(propertyLocalName, arrayProperty);
+                            }
+                            else
+                            {
+                                schema.properties.Add(propertyLocalName, dataProperty);
+                            }   
                         }
 
                         if (property.IsObjectProperty())
                         {
+                            // Set up the (possibly later on nested nested) property field
+                            OASDocument.UriProperty uriProperty = new OASDocument.UriProperty();
+
                             OntologyClass range = property.Ranges.First();
                             if (range.IsNamed() && g.OwlClasses.Contains(range))
                             {
-                                outputProperty.oneOf = new List<Dictionary<string, string>>();
-                                outputProperty.oneOf.Add(new Dictionary<string, string> { { "$ref", "#/components/schemas/" + range.GetLocalName() } });
-                                outputProperty.oneOf.Add(new Dictionary<string, string> { { "type", "string" }, { "format", "uri" } });
+                                uriProperty.oneOf = new List<Dictionary<string, string>>();
+                                uriProperty.oneOf.Add(new Dictionary<string, string> { { "$ref", "#/components/schemas/" + range.GetLocalName() } });
+                                uriProperty.oneOf.Add(new Dictionary<string, string> { { "type", "string" }, { "format", "uri" } });
                             }
                             else
                             {
                                 // Fall back to string representation for unknown types
-                                outputProperty.type = "string";
-                                outputProperty.format = "uri";
+                                uriProperty.type = "string";
+                                uriProperty.format = "uri";
+                            }
+
+                            if (propertyAllowsMultipleValues)
+                            {
+                                OASDocument.ArrayProperty arrayProperty = new OASDocument.ArrayProperty();
+                                arrayProperty.items = uriProperty;
+                                // TODO: Get max/min/exact from constraint and apply here.
+                                schema.properties.Add(propertyLocalName, arrayProperty);
+                            }
+                            else
+                            {
+                                schema.properties.Add(propertyLocalName, uriProperty);
                             }
                         }
-
-                        // TODO: add max/min constraints here
-                        schema.properties.Add(propertyLocalName, outputProperty);
                     }
                 }
                 // TODO: figure out which properties that have min 1 constraint; use to populate below
