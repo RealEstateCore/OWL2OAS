@@ -113,19 +113,16 @@ namespace OWL2OAS
             Dictionary<string, OASDocument.Schema> schemas = new Dictionary<string, OASDocument.Schema>();
             Dictionary<string, OASDocument.Path> paths = new Dictionary<string, OASDocument.Path>();
 
-            // Iterate over all leaf classes
+            // Iterate over all classes
             foreach (OntologyClass c in g.OwlClasses.Where(oClass => oClass.IsNamed()))
             {
                 // Get human-readable label for API (should this be fetched from other metadata property?)
                 // TODO: pluralization metadata for clean API?
                 string classLabel = c.GetLocalName();
 
-                // Create schema for class
+                // Create schema for class and corresponding properties dict
                 OASDocument.Schema schema = new OASDocument.Schema();
-
-                // TODO: parse superclasses for any restrictions defining max/min constraints, to be used inside loop
                 schema.properties = new Dictionary<string, OASDocument.Property>();
-
 
                 // Iterate over superclasses, extract constraints
                 Dictionary<IUriNode, PropertyConstraint> constraints = new Dictionary<IUriNode, PropertyConstraint>();
@@ -142,6 +139,7 @@ namespace OWL2OAS
                 }
 
                 // Add id and label for all entries
+                // TODO: JSON-LD syntax for ID, rdfs:label for label
                 OASDocument.Property idProperty = new OASDocument.Property();
                 idProperty.type = "string";
                 schema.properties.Add("id", idProperty);
@@ -158,10 +156,13 @@ namespace OWL2OAS
                     // We only process (named) object and data properties with singleton ranges.
                     if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1) {
 
+                        // Used for lookups against constraints dict
                         UriNode propertyNode = ((UriNode)property.Resource);
 
                         // Used to allocate property to schema.properties dictionary
-                        string propertyLocalName = ((UriNode)property.Resource).GetLocalName();
+                        string propertyLocalName = propertyNode.GetLocalName();
+
+                        // The return value: a property block to be added to the output document
                         OASDocument.Property outputProperty;
 
                         // Check if multiple values are allowed for this property. By default they are.
@@ -174,16 +175,14 @@ namespace OWL2OAS
                         // If this is a data property
                         if (property.IsDataProperty())
                         {
-                            // Set up the (possibly later on nested nested) property field
+                            // Set up the (possibly later on nested) property block
                             OASDocument.Property dataProperty = new OASDocument.Property();
 
                             // Fall back to string representation for unknown types
                             dataProperty.type = "string";
 
-                            // Parse XSD type into OAS type and format
+                            // Parse XSD type into OAS type and format (note: not all XSD types are covered)
                             string rangeXsdType = ((UriNode)property.Ranges.First().Resource).GetLocalName();
-
-                            // Look through well-known XSD type mapping (note: not all XSD types are covered)
                             if (xsdOsaMappings.ContainsKey(rangeXsdType))
                             {
                                 dataProperty.type = xsdOsaMappings[rangeXsdType].Item1;
@@ -194,14 +193,16 @@ namespace OWL2OAS
                                 }
                             }
 
+                            // Assign return value
                             outputProperty = dataProperty;
                         }
                         else
                         {
                             // This is an Object property
-                            // Set up the (possibly later on nested nested) property field
+                            // Set up the (possibly later on nested) property block
                             OASDocument.UriProperty uriProperty = new OASDocument.UriProperty();
 
+                            // Set the type of the property; locally defined named classes can be either URI or full schema representation
                             OntologyClass range = property.Ranges.First();
                             if (range.IsNamed() && g.OwlClasses.Contains(range))
                             {
@@ -211,7 +212,7 @@ namespace OWL2OAS
                             }
                             else
                             {
-                                // Fall back to string representation for unknown types
+                                // Fall back to URI representation
                                 uriProperty.type = "string";
                                 uriProperty.format = "uri";
                             }
@@ -219,11 +220,12 @@ namespace OWL2OAS
                             outputProperty = uriProperty;
                         }
 
-                        // If this field allows multiple values (as per the default), wrap in an array
+                        // If this field allows multiple values (as is the default), wrap it in an array
                         if (propertyAllowsMultipleValues)
                         {
                             OASDocument.ArrayProperty arrayProperty = new OASDocument.ArrayProperty();
                             arrayProperty.items = outputProperty;
+                            // Assign constraints on the array, if any
                             if (constraints.ContainsKey(propertyNode))
                             {
                                 PropertyConstraint pc = constraints[propertyNode];
@@ -238,16 +240,17 @@ namespace OWL2OAS
                         }
                         else
                         {
+                            // This is a single-valued property, assign it w/o the array
                             schema.properties.Add(propertyLocalName, outputProperty);
                         }
 
+                        // Tag any min 1 or exactly 1 properties as required
                         if (constraints.ContainsKey(propertyNode) && constraints[propertyNode].IsRequired())
                         {
                             schema.required.Add(propertyLocalName);
                         }
                     }
                 }
-
                 schemas.Add(classLabel, schema);
 
                 // Create path for class
@@ -256,6 +259,7 @@ namespace OWL2OAS
 
                 // Create each of the HTTP methods
                 // TODO: PUT, PATCH, etc
+                // TODO: filtering, parameters, etc
                 path.get = new OASDocument.Get();
                 path.get.summary = "Get all '" + classLabel + "' objects.";
                 path.get.responses = new Dictionary<string, OASDocument.Response>();
@@ -269,6 +273,7 @@ namespace OWL2OAS
                 OASDocument.Content content = new OASDocument.Content();
                 response.content.Add("application/jsonld", content);
 
+                // TODO: wrap responses in pagination?
                 content.schema = new Dictionary<string, string>();
                 content.schema.Add("$ref", "#/components/schemas/" + classLabel);
             }
