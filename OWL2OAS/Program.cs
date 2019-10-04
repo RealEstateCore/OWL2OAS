@@ -6,7 +6,6 @@ using VDS.RDF;
 using VDS.RDF.Ontology;
 using VDS.RDF.Parsing;
 using YamlDotNet.Serialization;
-using static OWL2OAS.OASDocument;
 
 namespace OWL2OAS
 {
@@ -31,7 +30,7 @@ namespace OWL2OAS
 
         public struct PropertyConstraint
         {
-            public OntologyProperty property;
+            public IUriNode property;
             public int min;
             public int max;
             public int exactly;
@@ -45,7 +44,11 @@ namespace OWL2OAS
             }
             public bool IsRequired()
             {
-                return (min == 1);
+                return (min == 1 || exactly == 1);
+            }
+            public override string ToString()
+            {
+                return String.Format("Property:\t<{0}>\nMin:\t{1}\nMax:\t{2}\nExactly:\t{3}",property, min, max, exactly);
             }
         }
 
@@ -125,7 +128,7 @@ namespace OWL2OAS
 
 
                 // Iterate over superclasses, extract constraints
-                Dictionary<OntologyProperty, PropertyConstraint> constraints = new Dictionary<OntologyProperty, PropertyConstraint>();
+                Dictionary<IUriNode, PropertyConstraint> constraints = new Dictionary<IUriNode, PropertyConstraint>();
                 foreach (OntologyClass superClass in c.DirectSuperClasses)
                 {
                     if (superClass.IsRestriction())
@@ -146,25 +149,30 @@ namespace OWL2OAS
                 labelProperty.type = "string";
                 schema.properties.Add("label", labelProperty);
 
+                // Set up list of required fields
+                schema.required = new List<string> { "id" };
+
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
                 foreach (OntologyProperty property in c.IsDomainOf)
                 {
                     // We only process (named) object and data properties with singleton ranges.
                     if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1) {
 
+                        UriNode propertyNode = ((UriNode)property.Resource);
+
                         // Used to allocate property to schema.properties dictionary
                         string propertyLocalName = ((UriNode)property.Resource).GetLocalName();
-                        
+                        OASDocument.Property outputProperty;
 
                         // Check if multiple values are allowed for this property. By default they are.
                         bool propertyAllowsMultipleValues = true;
-                        if ((constraints.ContainsKey(property) && constraints[property].MaxOne()) || property.IsFunctional())
+                        if ((constraints.ContainsKey(propertyNode) && constraints[propertyNode].MaxOne()) || property.IsFunctional())
                         {
                             propertyAllowsMultipleValues = false;
                         }
 
-                        // If this is a data property with an XSD datatype range
-                        if (property.IsDataProperty() && property.Ranges.First().IsXsdDatatype())
+                        // If this is a data property
+                        if (property.IsDataProperty())
                         {
                             // Set up the (possibly later on nested nested) property field
                             OASDocument.Property dataProperty = new OASDocument.Property();
@@ -186,21 +194,11 @@ namespace OWL2OAS
                                 }
                             }
 
-                            if (propertyAllowsMultipleValues)
-                            {
-                                OASDocument.ArrayProperty arrayProperty = new OASDocument.ArrayProperty();
-                                arrayProperty.items = dataProperty;
-                                // TODO: Get max/min/exact from constraint and apply here.
-                                schema.properties.Add(propertyLocalName, arrayProperty);
-                            }
-                            else
-                            {
-                                schema.properties.Add(propertyLocalName, dataProperty);
-                            }   
+                            outputProperty = dataProperty;
                         }
-
-                        if (property.IsObjectProperty())
+                        else
                         {
+                            // This is an Object property
                             // Set up the (possibly later on nested nested) property field
                             OASDocument.UriProperty uriProperty = new OASDocument.UriProperty();
 
@@ -218,22 +216,37 @@ namespace OWL2OAS
                                 uriProperty.format = "uri";
                             }
 
-                            if (propertyAllowsMultipleValues)
+                            outputProperty = uriProperty;
+                        }
+
+                        // If this field allows multiple values (as per the default), wrap in an array
+                        if (propertyAllowsMultipleValues)
+                        {
+                            OASDocument.ArrayProperty arrayProperty = new OASDocument.ArrayProperty();
+                            arrayProperty.items = outputProperty;
+                            if (constraints.ContainsKey(propertyNode))
                             {
-                                OASDocument.ArrayProperty arrayProperty = new OASDocument.ArrayProperty();
-                                arrayProperty.items = uriProperty;
-                                // TODO: Get max/min/exact from constraint and apply here.
-                                schema.properties.Add(propertyLocalName, arrayProperty);
+                                PropertyConstraint pc = constraints[propertyNode];
+                                if (pc.min != 0)
+                                    arrayProperty.minItems = pc.min;
+                                if (pc.max != 0)
+                                    arrayProperty.maxItems = pc.max;
+                                if (pc.exactly != 0)
+                                    arrayProperty.maxItems = arrayProperty.minItems = pc.exactly;
                             }
-                            else
-                            {
-                                schema.properties.Add(propertyLocalName, uriProperty);
-                            }
+                            schema.properties.Add(propertyLocalName, arrayProperty);
+                        }
+                        else
+                        {
+                            schema.properties.Add(propertyLocalName, outputProperty);
+                        }
+
+                        if (constraints.ContainsKey(propertyNode) && constraints[propertyNode].IsRequired())
+                        {
+                            schema.required.Add(propertyLocalName);
                         }
                     }
                 }
-                // TODO: figure out which properties that have min 1 constraint; use to populate below
-                schema.required = new List<string> { "id" };
 
                 schemas.Add(classLabel, schema);
 
@@ -279,6 +292,7 @@ namespace OWL2OAS
             OntologyGraph graph = restriction.Graph as OntologyGraph;
             IUriNode onProperty = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#onProperty"));
             IUriNode cardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#cardinality"));
+            IUriNode qualifiedCardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#qualifiedCardinality"));
             IUriNode someValuesFrom = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#someValuesFrom"));
             IUriNode minCardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#minCardinality"));
             IUriNode minQualifiedCardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#minQualifiedCardinality"));
@@ -289,12 +303,13 @@ namespace OWL2OAS
             {
                 PropertyConstraint pc = new PropertyConstraint();
                 IUriNode restrictionPropertyNode = restriction.GetNodesViaProperty(onProperty).UriNodes().Where(node => node.IsOntologyProperty()).First();
-                pc.property = graph.CreateOntologyProperty(restrictionPropertyNode);
+                pc.property = restrictionPropertyNode;
 
-                if (restriction.GetNodesViaProperty(cardinality).LiteralNodes().Count() == 1 &&
-                    restriction.GetNodesViaProperty(cardinality).LiteralNodes().First().IsInteger())
+                IEnumerable<INode> exactCardinalities = restriction.GetNodesViaProperty(cardinality).Union(restriction.GetNodesViaProperty(qualifiedCardinality));
+                if (exactCardinalities.LiteralNodes().Count() == 1 &&
+                    exactCardinalities.LiteralNodes().First().IsInteger())
                 {
-                    pc.exactly = int.Parse(restriction.GetNodesViaProperty(cardinality).LiteralNodes().First().Value);
+                    pc.exactly = int.Parse(exactCardinalities.LiteralNodes().First().Value);
                     return pc;
                 }
 

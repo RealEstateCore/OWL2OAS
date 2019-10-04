@@ -98,7 +98,7 @@ namespace OWL2OAS
         public static bool IsInteger(this ILiteralNode node)
         {
             string datatype = node.DataType.ToString();
-            return (datatype.Equals(XmlSpecsHelper.XmlSchemaDataTypeInt) || datatype.Equals(XmlSpecsHelper.XmlSchemaDataTypeInteger));
+            return (datatype.StartsWith(XmlSpecsHelper.NamespaceXmlSchema) && (datatype.EndsWith("Integer") ||datatype.EndsWith("Int")));
         }
 
         public static IEnumerable<INode> GetNodesViaProperty(this OntologyResource resource, INode property)
