@@ -173,9 +173,6 @@ namespace OWL2OAS
                 labelProperty.type = "string";
                 schema.properties.Add("rdfs:label", labelProperty);
 
-                // Set up list of required fields
-                schema.required = new List<string>();
-
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
                 foreach (OntologyProperty property in c.IsDomainOf)
                 {
@@ -271,6 +268,8 @@ namespace OWL2OAS
                         // Tag any min 1 or exactly 1 properties as required
                         if (constraints.ContainsKey(propertyNode) && constraints[propertyNode].IsRequired())
                         {
+                            if (schema.required == null)
+                                schema.required = new List<string>();
                             schema.required.Add(propertyLocalName);
                         }
                     }
