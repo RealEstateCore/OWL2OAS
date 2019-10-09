@@ -1,9 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.421
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29215.179
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OWL2OAS", "OWL2OAS\OWL2OAS.csproj", "{2AE0F52D-31B3-4C9A-994D-937EC35AE4F3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OWL2OAS", "OWL2OAS\OWL2OAS.csproj", "{2AE0F52D-31B3-4C9A-994D-937EC35AE4F3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleEvaluationServer", "SimpleEvaluationServer\SimpleEvaluationServer.csproj", "{99547C23-3026-487D-9309-6906661FB0CD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OAS-Generated-Client", "OAS-Generated-Client\OAS-Generated-Client.csproj", "{39BA8955-4F27-4120-9704-7B8B9284101D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{2AE0F52D-31B3-4C9A-994D-937EC35AE4F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2AE0F52D-31B3-4C9A-994D-937EC35AE4F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2AE0F52D-31B3-4C9A-994D-937EC35AE4F3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{99547C23-3026-487D-9309-6906661FB0CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99547C23-3026-487D-9309-6906661FB0CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99547C23-3026-487D-9309-6906661FB0CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99547C23-3026-487D-9309-6906661FB0CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39BA8955-4F27-4120-9704-7B8B9284101D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39BA8955-4F27-4120-9704-7B8B9284101D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39BA8955-4F27-4120-9704-7B8B9284101D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39BA8955-4F27-4120-9704-7B8B9284101D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

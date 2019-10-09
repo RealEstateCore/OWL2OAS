@@ -1,0 +1,23 @@
+{
+  "@context": {
+    "@base": "https://example.com/data/",
+    "@vocab": "https://w3id.org/rec/core/"
+  },
+  "@id": "E2421-CO2Meter",
+  "@type": "Device",
+  "deviceMeasurementUnit": {
+      "@type": "MeasurementUnit",
+      "rdfs:label": "Parts-per-million",
+      "unitSign": "PPM"
+  },
+  "isMountedInBuildingComponent": {
+      "@type": "Room",
+      "rdfs:label": "E-2421 (Karl Hammar's office)",
+      "isPartOfBuilding": {
+        "@id": "JTHBuilding"
+      }
+  },
+  "servesBuildingComponent": {
+    "@id": "E2421"
+  }
+}
