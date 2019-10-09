@@ -113,6 +113,28 @@ namespace OWL2OAS
             Dictionary<string, OASDocument.Schema> schemas = new Dictionary<string, OASDocument.Schema>();
             Dictionary<string, OASDocument.Path> paths = new Dictionary<string, OASDocument.Path>();
 
+            // Set context based on the ontology IRI
+            //OASDocument.Schema contextSchema = new OASDocument.Schema();
+            //contextSchema.properties = new Dictionary<string, OASDocument.Property>();
+            OASDocument.Property vocabularyProperty = new OASDocument.Property()
+            {
+                type = "string",
+                format = "uri",
+                defaultValue = rootOntologyUriNode.Uri.ToString()
+            };
+            OASDocument.Property baseNamespaceProperty = new OASDocument.Property()
+            {
+                type = "string",
+                format = "uri"
+            };
+            OASDocument.Schema contextSchema = new OASDocument.Schema()
+            {
+                required = new List<string> { "@vocab", "@base" },
+                properties = new Dictionary<string, OASDocument.Property> { { "@vocab", vocabularyProperty }, { "@base", baseNamespaceProperty } }
+            };
+            //contextSchema.properties.Add("@context", contextProperty);
+            schemas.Add("Context", contextSchema);
+
             // Iterate over all classes
             foreach (OntologyClass c in g.OwlClasses.Where(oClass => oClass.IsNamed()))
             {
@@ -138,22 +160,7 @@ namespace OWL2OAS
                     }
                 }
 
-                // Set context based on the ontology IRI
-                OASDocument.Property vocabularyProperty = new OASDocument.Property() {
-                    type = "string",
-                    format = "uri",
-                    defaultValue = rootOntologyUriNode.Uri.ToString()
-                };
-                OASDocument.Property baseNamespaceProperty = new OASDocument.Property()
-                {
-                    type = "string",
-                    format = "uri"
-                };
-                OASDocument.ObjectProperty contextProperty = new OASDocument.ObjectProperty() {
-                    required = new List<string> { "@vocab", "@base" },
-                    properties = new Dictionary<string, OASDocument.Property> { { "@vocab", vocabularyProperty }, { "@base", baseNamespaceProperty } }
-                };
-                schema.properties.Add("@context", contextProperty);
+                // Add reference to context schema
 
                 // Add @id for all entries
                 OASDocument.Property idProperty = new OASDocument.Property();
