@@ -11,7 +11,7 @@ namespace IO.Swagger.Model {
   /// 
   /// </summary>
   [DataContract]
-  public class GeometryContext {
+  public class Context {
     /// <summary>
     /// Gets or Sets Vocab
     /// </summary>
@@ -33,7 +33,7 @@ namespace IO.Swagger.Model {
     /// <returns>String presentation of the object</returns>
     public override string ToString()  {
       var sb = new StringBuilder();
-      sb.Append("class GeometryContext {\n");
+      sb.Append("class Context {\n");
       sb.Append("  Vocab: ").Append(Vocab).Append("\n");
       sb.Append("  Base: ").Append(Base).Append("\n");
       sb.Append("}\n");

@@ -230,7 +230,7 @@ namespace IO.Swagger.Api
         /// <returns>Device</returns>
         public Device DeviceGet ()
         {
-    
+
             //var path = "/Device";
             string path = "https://localhost:44322/api/O2OEval";
             path = path.Replace("{format}", "json");

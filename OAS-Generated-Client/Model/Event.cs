@@ -17,7 +17,7 @@ namespace IO.Swagger.Model {
     /// </summary>
     [DataMember(Name="@context", EmitDefaultValue=false)]
     [JsonProperty(PropertyName = "@context")]
-    public GeometryContext Context { get; set; }
+    public Context Context { get; set; }
 
     /// <summary>
     /// Gets or Sets Id
