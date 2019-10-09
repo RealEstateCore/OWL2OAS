@@ -142,7 +142,7 @@ namespace OWL2OAS
                 // TODO: JSON-LD syntax for ID, rdfs:label for label
                 OASDocument.Property idProperty = new OASDocument.Property();
                 idProperty.type = "string";
-                schema.properties.Add("id", idProperty);
+                schema.properties.Add("@id", idProperty);
                 OASDocument.Property labelProperty = new OASDocument.Property();
                 labelProperty.type = "string";
                 schema.properties.Add("label", labelProperty);
