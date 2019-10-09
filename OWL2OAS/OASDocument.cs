@@ -50,7 +50,15 @@ namespace OWL2OAS
 
         public class UriProperty: Property
         {
-            public List<Dictionary<string, string>> oneOf;
+            public UriProperty(string referenceType)
+            {
+                oneOf = new List<object>() { new Dictionary<string, string> { { "$ref", "#/components/schemas/" + referenceType } } };
+                Schema uriSchema = new Schema();
+                uriSchema.properties = new Dictionary<string, Property> { { "@id", new Property() { type = "string" } } };
+                uriSchema.required = new List<string> { "@id" };
+                oneOf.Add(uriSchema);
+            }
+            public List<object> oneOf;
         }
 
         public class Property

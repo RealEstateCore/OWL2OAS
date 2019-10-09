@@ -148,7 +148,7 @@ namespace OWL2OAS
                 schema.properties.Add("label", labelProperty);
 
                 // Set up list of required fields
-                schema.required = new List<string> { "id" };
+                schema.required = new List<string> { "@id" };
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
                 foreach (OntologyProperty property in c.IsDomainOf)
@@ -200,21 +200,19 @@ namespace OWL2OAS
                         {
                             // This is an Object property
                             // Set up the (possibly later on nested) property block
-                            OASDocument.UriProperty uriProperty = new OASDocument.UriProperty();
+                            OASDocument.Property uriProperty;
 
                             // Set the type of the property; locally defined named classes can be either URI or full schema representation
                             OntologyClass range = property.Ranges.First();
                             if (range.IsNamed() && g.OwlClasses.Contains(range))
                             {
-                                uriProperty.oneOf = new List<Dictionary<string, string>>();
-                                uriProperty.oneOf.Add(new Dictionary<string, string> { { "$ref", "#/components/schemas/" + range.GetLocalName() } });
-                                uriProperty.oneOf.Add(new Dictionary<string, string> { { "type", "string" }, { "format", "uri" } });
+                                uriProperty = new OASDocument.UriProperty(range.GetLocalName());
                             }
                             else
                             {
-                                // Fall back to URI representation
+                                // Fall back to string representation
+                                uriProperty = new OASDocument.Property();
                                 uriProperty.type = "string";
-                                uriProperty.format = "uri";
                             }
 
                             outputProperty = uriProperty;
