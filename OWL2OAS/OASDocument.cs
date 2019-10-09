@@ -40,6 +40,13 @@ namespace OWL2OAS
             public Dictionary<string, Property> properties;
         }
 
+        public class ObjectProperty: Property
+        {
+            public new string type { get { return "object"; } }
+            public Dictionary<string, Property> properties;
+            public List<string> required;
+        }
+
         public class ArrayProperty: Property
         {
             public new string type = "array";
@@ -65,6 +72,8 @@ namespace OWL2OAS
         {
             public string type;
             public string format;
+            [YamlMember(Alias = "default")]
+            public string defaultValue { get; set; }
         }
 
         public class PropertyItems

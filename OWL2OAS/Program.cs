@@ -138,17 +138,30 @@ namespace OWL2OAS
                     }
                 }
 
+                // Set context based on the ontology IRI
+                OASDocument.Property vocabularyProperty = new OASDocument.Property() {
+                    type = "string",
+                    format = "uri",
+                    defaultValue = rootOntologyUriNode.Uri.ToString()
+                };
+                OASDocument.ObjectProperty contextProperty = new OASDocument.ObjectProperty() {
+                    required = new List<string> { "@vocabulary" },
+                    properties = new Dictionary<string, OASDocument.Property> { { "@vocabulary", vocabularyProperty } }
+                };
+                schema.properties.Add("@context", contextProperty);
+
                 // Add id and label for all entries
-                // TODO: JSON-LD syntax for ID, rdfs:label for label
                 OASDocument.Property idProperty = new OASDocument.Property();
                 idProperty.type = "string";
                 schema.properties.Add("@id", idProperty);
+
+                // Label is an option for all entries
                 OASDocument.Property labelProperty = new OASDocument.Property();
                 labelProperty.type = "string";
-                schema.properties.Add("label", labelProperty);
+                schema.properties.Add("rdfs:label", labelProperty);
 
                 // Set up list of required fields
-                schema.required = new List<string> { "@id" };
+                schema.required = new List<string> { "@context", "@id" };
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
                 foreach (OntologyProperty property in c.IsDomainOf)
