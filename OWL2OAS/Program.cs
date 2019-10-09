@@ -161,6 +161,7 @@ namespace OWL2OAS
                 }
 
                 // Add reference to context schema
+                schema.properties.Add("@context", new OASDocument.ReferenceProperty("Context"));
 
                 // Add @id for all entries
                 OASDocument.Property idProperty = new OASDocument.Property();

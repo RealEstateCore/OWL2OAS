@@ -76,6 +76,16 @@ namespace OWL2OAS
             public string defaultValue { get; set; }
         }
 
+        public class ReferenceProperty: Property
+        {
+            public ReferenceProperty(string referenceType)
+            {
+                reference = "#/components/schemas/" + referenceType;
+            }
+            [YamlMember(Alias = "$ref")]
+            public string reference { get; set; }
+        }
+
         public class PropertyItems
         {
 
