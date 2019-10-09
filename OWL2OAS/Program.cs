@@ -144,16 +144,29 @@ namespace OWL2OAS
                     format = "uri",
                     defaultValue = rootOntologyUriNode.Uri.ToString()
                 };
+                OASDocument.Property baseNamespaceProperty = new OASDocument.Property()
+                {
+                    type = "string",
+                    format = "uri"
+                };
                 OASDocument.ObjectProperty contextProperty = new OASDocument.ObjectProperty() {
-                    required = new List<string> { "@vocabulary" },
-                    properties = new Dictionary<string, OASDocument.Property> { { "@vocabulary", vocabularyProperty } }
+                    required = new List<string> { "@vocab", "@base" },
+                    properties = new Dictionary<string, OASDocument.Property> { { "@vocab", vocabularyProperty }, { "@base", baseNamespaceProperty } }
                 };
                 schema.properties.Add("@context", contextProperty);
 
-                // Add id and label for all entries
+                // Add @id for all entries
                 OASDocument.Property idProperty = new OASDocument.Property();
                 idProperty.type = "string";
                 schema.properties.Add("@id", idProperty);
+
+                // Add @type for all entries
+                OASDocument.Property typeProperty = new OASDocument.Property
+                {
+                    type = "string",
+                    defaultValue = c.GetLocalName()
+                };
+                schema.properties.Add("@type", typeProperty);
 
                 // Label is an option for all entries
                 OASDocument.Property labelProperty = new OASDocument.Property();
@@ -161,7 +174,7 @@ namespace OWL2OAS
                 schema.properties.Add("rdfs:label", labelProperty);
 
                 // Set up list of required fields
-                schema.required = new List<string> { "@context", "@id" };
+                schema.required = new List<string>();
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
                 foreach (OntologyProperty property in c.IsDomainOf)
