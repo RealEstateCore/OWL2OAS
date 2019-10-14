@@ -5,11 +5,13 @@
   },
   "@id": "E2421-CO2Meter",
   "@type": "Device",
-  "deviceMeasurementUnit": {
+  "deviceMeasurementUnit": [
+    {
       "@type": "MeasurementUnit",
       "rdfs:label": "Parts-per-million",
       "unitSign": "PPM"
-  },
+    }
+  ],
   "isMountedInBuildingComponent": {
       "@type": "Room",
       "rdfs:label": "E-2421 (Karl Hammar's office)",

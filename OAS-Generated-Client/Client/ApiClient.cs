@@ -10,7 +10,6 @@ using System.Text;
 using Newtonsoft.Json;
 using RestSharp;
 using RestSharp.Extensions;
-using System.Diagnostics;
 
 namespace IO.Swagger.Client
 {
@@ -25,7 +24,7 @@ namespace IO.Swagger.Client
         /// Initializes a new instance of the <see cref="ApiClient" /> class.
         /// </summary>
         /// <param name="basePath">The base path.</param>
-        public ApiClient(String basePath="http://localhost:5000/")
+        public ApiClient(String basePath="http://localhost:8080/")
         {
             BasePath = basePath;
             RestClient = new RestClient(BasePath);
@@ -201,8 +200,6 @@ namespace IO.Swagger.Client
             // at this point, it must be a model (json)
             try
             {
-                Debug.Print(content);
-                Debug.Print("Length: " + content.Length);
                 return JsonConvert.DeserializeObject(content, type);
             }
             catch (IOException e)

@@ -34,11 +34,11 @@ namespace IO.Swagger.Model {
     public string Type { get; set; }
 
     /// <summary>
-    /// Gets or Sets Label
+    /// Gets or Sets Rdfslabel
     /// </summary>
-    [DataMember(Name="label", EmitDefaultValue=false)]
-    [JsonProperty(PropertyName = "label")]
-    public string Label { get; set; }
+    [DataMember(Name="rdfs:label", EmitDefaultValue=false)]
+    [JsonProperty(PropertyName = "rdfs:label")]
+    public string Rdfslabel { get; set; }
 
     /// <summary>
     /// Gets or Sets HasRealEstateComponent
@@ -58,7 +58,7 @@ namespace IO.Swagger.Model {
       sb.Append("  Context: ").Append(Context).Append("\n");
       sb.Append("  Id: ").Append(Id).Append("\n");
       sb.Append("  Type: ").Append(Type).Append("\n");
-      sb.Append("  Label: ").Append(Label).Append("\n");
+      sb.Append("  Rdfslabel: ").Append(Rdfslabel).Append("\n");
       sb.Append("  HasRealEstateComponent: ").Append(HasRealEstateComponent).Append("\n");
       sb.Append("}\n");
       return sb.ToString();
