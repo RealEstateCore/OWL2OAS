@@ -247,7 +247,7 @@ namespace OWL2OAS
                             OntologyClass range = property.Ranges.First();
                             if (range.IsNamed() && g.OwlClasses.Contains(range))
                             {
-                                uriProperty = new OASDocument.UriProperty(range.GetLocalName());
+                                uriProperty = new OASDocument.ReferenceProperty(range.GetLocalName());
                             }
                             else
                             {
