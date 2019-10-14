@@ -12,6 +12,7 @@ namespace OWL2OAS
         public Info info { get; set; }
         public Components components { get; set; }
         public Dictionary<string, Path> paths { get; set; }
+        public List<Dictionary<string, string>> servers { get; set; }
 
         public class Info
         {

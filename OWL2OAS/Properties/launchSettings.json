@@ -1,8 +1,7 @@
 {
   "profiles": {
     "OWL2OAS": {
-      "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\Karl Hammar\\OneDrive\\Skrivbord\\rec.owl\""
+      "commandName": "Project"
     }
   }
 }

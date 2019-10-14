@@ -108,6 +108,16 @@ namespace OWL2OAS
                 document.info.description = string.Format("The documentation below is automatically extracted from an <rdfs:comment> annotation on the ontology {0}:<br/><br/>*{1}*", rootOntology, ontologyComment);
             }
 
+            // Server block            
+            if (args.Length > 0)
+            {
+                document.servers = new List<Dictionary<string, string>> { new Dictionary<string, string> { { "url", args[0] } } };
+            }
+            else
+            {
+                document.servers = new List<Dictionary<string, string>> { new Dictionary<string, string> { { "url", "http://localhost:8080/" } } };
+            }
+
             // Parse OWL classes. For each class, create a schema and a path
             document.components = new OASDocument.Components();
             Dictionary<string, OASDocument.Schema> schemas = new Dictionary<string, OASDocument.Schema>();
