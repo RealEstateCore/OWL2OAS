@@ -34,32 +34,32 @@ namespace IO.Swagger.Model {
     public string Type { get; set; }
 
     /// <summary>
-    /// Gets or Sets Rdfslabel
+    /// Gets or Sets Label
     /// </summary>
-    [DataMember(Name="rdfs:label", EmitDefaultValue=false)]
-    [JsonProperty(PropertyName = "rdfs:label")]
-    public string Rdfslabel { get; set; }
+    [DataMember(Name="label", EmitDefaultValue=false)]
+    [JsonProperty(PropertyName = "label")]
+    public string Label { get; set; }
 
     /// <summary>
     /// Gets or Sets AssociatedWithEvent
     /// </summary>
     [DataMember(Name="associatedWithEvent", EmitDefaultValue=false)]
     [JsonProperty(PropertyName = "associatedWithEvent")]
-    public List<Event> AssociatedWithEvent { get; set; }
+    public Event AssociatedWithEvent { get; set; }
 
     /// <summary>
     /// Gets or Sets DeviceMeasurementUnit
     /// </summary>
     [DataMember(Name="deviceMeasurementUnit", EmitDefaultValue=false)]
     [JsonProperty(PropertyName = "deviceMeasurementUnit")]
-    public List<MeasurementUnit> DeviceMeasurementUnit { get; set; }
+    public MeasurementUnit DeviceMeasurementUnit { get; set; }
 
     /// <summary>
     /// Gets or Sets DeviceQuantityKind
     /// </summary>
     [DataMember(Name="deviceQuantityKind", EmitDefaultValue=false)]
     [JsonProperty(PropertyName = "deviceQuantityKind")]
-    public List<QuantityKind> DeviceQuantityKind { get; set; }
+    public QuantityKind DeviceQuantityKind { get; set; }
 
     /// <summary>
     /// Gets or Sets HasSubDevice
@@ -73,21 +73,21 @@ namespace IO.Swagger.Model {
     /// </summary>
     [DataMember(Name="hasSuperDevice", EmitDefaultValue=false)]
     [JsonProperty(PropertyName = "hasSuperDevice")]
-    public List<Device> HasSuperDevice { get; set; }
+    public Device HasSuperDevice { get; set; }
 
     /// <summary>
     /// Gets or Sets IsMountedInBuildingComponent
     /// </summary>
     [DataMember(Name="isMountedInBuildingComponent", EmitDefaultValue=false)]
     [JsonProperty(PropertyName = "isMountedInBuildingComponent")]
-    public OneOfDeviceIsMountedInBuildingComponent IsMountedInBuildingComponent { get; set; }
+    public BuildingComponent IsMountedInBuildingComponent { get; set; }
 
     /// <summary>
     /// Gets or Sets ServesBuilding
     /// </summary>
     [DataMember(Name="servesBuilding", EmitDefaultValue=false)]
     [JsonProperty(PropertyName = "servesBuilding")]
-    public List<Building> ServesBuilding { get; set; }
+    public Building ServesBuilding { get; set; }
 
     /// <summary>
     /// Gets or Sets ServesBuildingComponent
@@ -114,7 +114,7 @@ namespace IO.Swagger.Model {
       sb.Append("  Context: ").Append(Context).Append("\n");
       sb.Append("  Id: ").Append(Id).Append("\n");
       sb.Append("  Type: ").Append(Type).Append("\n");
-      sb.Append("  Rdfslabel: ").Append(Rdfslabel).Append("\n");
+      sb.Append("  Label: ").Append(Label).Append("\n");
       sb.Append("  AssociatedWithEvent: ").Append(AssociatedWithEvent).Append("\n");
       sb.Append("  DeviceMeasurementUnit: ").Append(DeviceMeasurementUnit).Append("\n");
       sb.Append("  DeviceQuantityKind: ").Append(DeviceQuantityKind).Append("\n");

@@ -34,32 +34,32 @@ namespace IO.Swagger.Model {
     public string Type { get; set; }
 
     /// <summary>
-    /// Gets or Sets Rdfslabel
+    /// Gets or Sets Label
     /// </summary>
-    [DataMember(Name="rdfs:label", EmitDefaultValue=false)]
-    [JsonProperty(PropertyName = "rdfs:label")]
-    public string Rdfslabel { get; set; }
+    [DataMember(Name="label", EmitDefaultValue=false)]
+    [JsonProperty(PropertyName = "label")]
+    public string Label { get; set; }
 
     /// <summary>
     /// Gets or Sets EventMeasurementUnit
     /// </summary>
     [DataMember(Name="eventMeasurementUnit", EmitDefaultValue=false)]
     [JsonProperty(PropertyName = "eventMeasurementUnit")]
-    public List<MeasurementUnit> EventMeasurementUnit { get; set; }
+    public MeasurementUnit EventMeasurementUnit { get; set; }
 
     /// <summary>
     /// Gets or Sets EventQuantityKind
     /// </summary>
     [DataMember(Name="eventQuantityKind", EmitDefaultValue=false)]
     [JsonProperty(PropertyName = "eventQuantityKind")]
-    public List<QuantityKind> EventQuantityKind { get; set; }
+    public QuantityKind EventQuantityKind { get; set; }
 
     /// <summary>
     /// Gets or Sets HasCreatedTime
     /// </summary>
     [DataMember(Name="hasCreatedTime", EmitDefaultValue=false)]
     [JsonProperty(PropertyName = "hasCreatedTime")]
-    public List<DateTime?> HasCreatedTime { get; set; }
+    public DateTime? HasCreatedTime { get; set; }
 
     /// <summary>
     /// Gets or Sets HasDeletedTime
@@ -128,7 +128,7 @@ namespace IO.Swagger.Model {
       sb.Append("  Context: ").Append(Context).Append("\n");
       sb.Append("  Id: ").Append(Id).Append("\n");
       sb.Append("  Type: ").Append(Type).Append("\n");
-      sb.Append("  Rdfslabel: ").Append(Rdfslabel).Append("\n");
+      sb.Append("  Label: ").Append(Label).Append("\n");
       sb.Append("  EventMeasurementUnit: ").Append(EventMeasurementUnit).Append("\n");
       sb.Append("  EventQuantityKind: ").Append(EventQuantityKind).Append("\n");
       sb.Append("  HasCreatedTime: ").Append(HasCreatedTime).Append("\n");

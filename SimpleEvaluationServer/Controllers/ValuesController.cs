@@ -22,7 +22,7 @@ namespace SimpleEvaluationServer.Controllers
             using (StreamReader reader = new StreamReader(stream))
             {
                 string result = reader.ReadToEnd();
-                return result;
+                return Content(result, "application/json");
             }
         }
 

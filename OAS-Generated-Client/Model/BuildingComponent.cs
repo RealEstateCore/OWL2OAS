@@ -34,11 +34,11 @@ namespace IO.Swagger.Model {
     public string Type { get; set; }
 
     /// <summary>
-    /// Gets or Sets Rdfslabel
+    /// Gets or Sets Label
     /// </summary>
-    [DataMember(Name="rdfs:label", EmitDefaultValue=false)]
-    [JsonProperty(PropertyName = "rdfs:label")]
-    public string Rdfslabel { get; set; }
+    [DataMember(Name="label", EmitDefaultValue=false)]
+    [JsonProperty(PropertyName = "label")]
+    public string Label { get; set; }
 
     /// <summary>
     /// Gets or Sets ContainsMountedDevice
@@ -59,14 +59,14 @@ namespace IO.Swagger.Model {
     /// </summary>
     [DataMember(Name="hasSuperBuildingComponent", EmitDefaultValue=false)]
     [JsonProperty(PropertyName = "hasSuperBuildingComponent")]
-    public List<BuildingComponent> HasSuperBuildingComponent { get; set; }
+    public BuildingComponent HasSuperBuildingComponent { get; set; }
 
     /// <summary>
     /// Gets or Sets IsPartOfBuilding
     /// </summary>
     [DataMember(Name="isPartOfBuilding", EmitDefaultValue=false)]
     [JsonProperty(PropertyName = "isPartOfBuilding")]
-    public List<Building> IsPartOfBuilding { get; set; }
+    public Building IsPartOfBuilding { get; set; }
 
 
     /// <summary>
@@ -79,7 +79,7 @@ namespace IO.Swagger.Model {
       sb.Append("  Context: ").Append(Context).Append("\n");
       sb.Append("  Id: ").Append(Id).Append("\n");
       sb.Append("  Type: ").Append(Type).Append("\n");
-      sb.Append("  Rdfslabel: ").Append(Rdfslabel).Append("\n");
+      sb.Append("  Label: ").Append(Label).Append("\n");
       sb.Append("  ContainsMountedDevice: ").Append(ContainsMountedDevice).Append("\n");
       sb.Append("  HasSubBuildingComponent: ").Append(HasSubBuildingComponent).Append("\n");
       sb.Append("  HasSuperBuildingComponent: ").Append(HasSuperBuildingComponent).Append("\n");

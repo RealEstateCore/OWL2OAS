@@ -17,7 +17,9 @@
         "@id": "JTHBuilding"
       }
   },
-  "servesBuildingComponent": {
-    "@id": "E2421"
-  }
+  "servesBuildingComponent": [
+    {
+      "@id": "E2421"
+    }
+  ]
 }
