@@ -257,7 +257,23 @@ namespace OWL2OAS
                             OntologyClass range = property.Ranges.First();
                             if (range.IsNamed() && g.OwlClasses.Contains(range))
                             {
-                                uriProperty = new OASDocument.ReferenceProperty(range.GetLocalName());
+                                OASDocument.Property nestedIdProperty = new OASDocument.Property()
+                                {
+                                    type = "string"
+                                };
+                                OASDocument.Property nestedTypeProperty = new OASDocument.Property()
+                                {
+                                    type = "string",
+                                    defaultValue = range.GetLocalName()
+                                };
+                                uriProperty = new OASDocument.ObjectProperty()
+                                {
+                                    properties = new Dictionary<string, OASDocument.Property>() {
+                                        { "@id", nestedIdProperty },
+                                        { "@type", nestedTypeProperty }
+                                    },
+                                    required = new List<string>() { "@id" }
+                                };
                             }
                             else
                             {
