@@ -5,6 +5,7 @@ using System.Text;
 using VDS.RDF;
 using VDS.RDF.Ontology;
 using VDS.RDF.Parsing;
+using VDS.RDF.Query.Inference;
 using YamlDotNet.Serialization;
 
 namespace OWL2OAS
@@ -202,7 +203,8 @@ namespace OWL2OAS
                 schema.properties.Add("label", labelProperty);
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
-                foreach (OntologyProperty property in c.IsDomainOf)
+                IEnumerable<OntologyProperty> properties = c.SuperClasses.SelectMany(clz => clz.IsDomainOf).Union(c.IsDomainOf);
+                foreach (OntologyProperty property in properties)
                 {
                     // We only process (named) object and data properties with singleton ranges.
                     if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1) {
