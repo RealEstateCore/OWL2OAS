@@ -137,10 +137,20 @@ namespace OWL2OAS
                 type = "string",
                 format = "uri"
             };
+            OASDocument.Property labelContextProperty = new OASDocument.Property()
+            {
+                type = "string",
+                format = "uri",
+                defaultValue = "http://www.w3.org/2000/01/rdf-schema#label"
+            };
             OASDocument.Schema contextSchema = new OASDocument.Schema()
             {
-                required = new List<string> { "@vocab", "@base" },
-                properties = new Dictionary<string, OASDocument.Property> { { "@vocab", vocabularyProperty }, { "@base", baseNamespaceProperty } }
+                required = new List<string> { "@vocab", "@base", "label" },
+                properties = new Dictionary<string, OASDocument.Property> {
+                    { "@vocab", vocabularyProperty },
+                    { "@base", baseNamespaceProperty },
+                    { "label", labelContextProperty }
+                }
             };
             //contextSchema.properties.Add("@context", contextProperty);
             schemas.Add("Context", contextSchema);
@@ -189,7 +199,7 @@ namespace OWL2OAS
                 // Label is an option for all entries
                 OASDocument.Property labelProperty = new OASDocument.Property();
                 labelProperty.type = "string";
-                schema.properties.Add("rdfs:label", labelProperty);
+                schema.properties.Add("label", labelProperty);
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
                 foreach (OntologyProperty property in c.IsDomainOf)
