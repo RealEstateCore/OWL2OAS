@@ -26,6 +26,13 @@ namespace IO.Swagger.Model {
     [JsonProperty(PropertyName = "@base")]
     public string Base { get; set; }
 
+    /// <summary>
+    /// Gets or Sets Label
+    /// </summary>
+    [DataMember(Name="label", EmitDefaultValue=false)]
+    [JsonProperty(PropertyName = "label")]
+    public string Label { get; set; }
+
 
     /// <summary>
     /// Get the string presentation of the object
@@ -36,6 +43,7 @@ namespace IO.Swagger.Model {
       sb.Append("class Context {\n");
       sb.Append("  Vocab: ").Append(Vocab).Append("\n");
       sb.Append("  Base: ").Append(Base).Append("\n");
+      sb.Append("  Label: ").Append(Label).Append("\n");
       sb.Append("}\n");
       return sb.ToString();
     }
