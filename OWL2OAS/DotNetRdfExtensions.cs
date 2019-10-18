@@ -112,6 +112,11 @@ namespace OWL2OAS
             return resource.Graph.GetTriplesWithSubjectPredicate(resource.Resource, property).Select(triple => triple.Object);
         }
 
+        public static IEnumerable<ILiteralNode> GetLiteralNodesViaProperty(this OntologyResource resource, INode property)
+        {
+            return resource.GetNodesViaProperty(property).Where(node => node.NodeType == NodeType.Literal).Select(node => node as ILiteralNode);
+        }
+
         public static bool IsXsdDatatype(this OntologyClass oClass)
         {
             if (oClass.Resource.NodeType.Equals(NodeType.Uri))

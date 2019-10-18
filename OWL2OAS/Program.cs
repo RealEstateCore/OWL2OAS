@@ -75,10 +75,11 @@ namespace OWL2OAS
             // Create OAS Info header
             document.info = new OASDocument.Info();
 
-            // Check for mandatory components (label, version info, cc:license).
-            if (!rootOntology.Label.Any())
+            // Check for mandatory components (dc:title, version info, cc:license).
+            IUriNode dcTitle = g.CreateUriNode(new Uri("http://purl.org/dc/elements/1.1/title"));
+            if (!rootOntology.GetLiteralNodesViaProperty(dcTitle).Any())
             {
-                throw new RdfException(string.Format("Ontology <{0}> does not have an <rdfs:label> annotation.", rootOntology));   
+                throw new RdfException(string.Format("Ontology <{0}> does not have an <dc:title> annotation.", rootOntology));   
             }
             if (!rootOntology.VersionInfo.Any())
             {
@@ -90,7 +91,7 @@ namespace OWL2OAS
                 throw new RdfException(string.Format("Ontology <{0}> does not have an <cc:license> annotation that is a URI or literal.", rootOntology));
             }
 
-            document.info.title = rootOntology.Label.OrderBy(label => label.HasLanguage()).First().Value;
+            document.info.title = rootOntology.GetLiteralNodesViaProperty(dcTitle).OrderBy(title => title.HasLanguage()).First().Value;
             document.info.version = rootOntology.VersionInfo.OrderBy(versionInfo => versionInfo.HasLanguage()).First().Value;
             document.info.license = new OASDocument.License();
             INode licenseNode = rootOntology.GetNodesViaProperty(ccLicense).OrderBy(node => node.NodeType).First();
@@ -105,10 +106,11 @@ namespace OWL2OAS
             }
 
             // Non-mandatory info components, e.g., rdfs:comment
-            if (rootOntology.Comment.Any())
+            IUriNode dcDescription = g.CreateUriNode(new Uri("http://purl.org/dc/elements/1.1/description"));
+            if (rootOntology.GetLiteralNodesViaProperty(dcDescription).Any())
             {
-                string ontologyComment = rootOntology.Comment.OrderBy(comment => comment.HasLanguage()).First().Value.Trim().Replace("\r\n","\n").Replace("\n", "<br/>");
-                document.info.description = string.Format("The documentation below is automatically extracted from an <rdfs:comment> annotation on the ontology {0}:<br/><br/>*{1}*", rootOntology, ontologyComment);
+                string ontologyDescription = rootOntology.GetLiteralNodesViaProperty(dcDescription).OrderBy(description => description.HasLanguage()).First().Value.Trim().Replace("\r\n","\n").Replace("\n", "<br/>");
+                document.info.description = string.Format("The documentation below is automatically extracted from a <dc:description> annotation on the ontology {0}:<br/><br/>*{1}*", rootOntology, ontologyDescription);
             }
 
             // Server block            

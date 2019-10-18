@@ -35,11 +35,6 @@ Note that this module reuses certain classes, properties, and named individuals 
         <cpannotationschema:coversRequirements xml:lang="en">Where is the real estate Ulvsnaes 1:7 located?</cpannotationschema:coversRequirements>
         <cpannotationschema:coversRequirements xml:lang="en">Which buildings and land make up the real estate Ulvsnaes 1:7?</cpannotationschema:coversRequirements>
         <cpannotationschema:coversRequirements xml:lang="en">Which parts of Building 1 (e.g., rooms, wings, etc) are covered by electricity meter 3?</cpannotationschema:coversRequirements>
-        <rdfs:comment xml:lang="en">The REC core module collects the top-level classes and properties that span over or are reused within multiple REC modules.
-
-Note that this module reuses certain classes, properties, and named individuals from other vocabularies, e.g., GeoSPARQL; the copyright conditions on those reused entities are stated in their respective rdfs:comments annotations.
-        </rdfs:comment>
-        <rdfs:label>RealEstateCore Core Module</rdfs:label>
         <rdfs:seeAlso rdf:resource="https://realestatecore.io"/>
         <owl:versionInfo rdf:datatype="http://www.w3.org/2001/XMLSchema#string">3.0</owl:versionInfo>
     </owl:Ontology>
