@@ -53,6 +53,20 @@ namespace OWL2OAS
             }
         }
 
+        // Custom comparer that defers to comparison of nested INodes
+        class OntologyResourceComparer : IEqualityComparer<OntologyResource>
+        {
+            public bool Equals(OntologyResource x, OntologyResource y)
+            {
+                return x.Resource == y.Resource;
+            }
+
+            public int GetHashCode(OntologyResource obj)
+            {
+                return obj.Resource.GetHashCode();
+            }
+        }
+
         static void Main(string[] args)
         {
             // Load ontology graph
@@ -207,8 +221,11 @@ namespace OWL2OAS
                 schema.properties.Add("label", labelProperty);
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
-                IEnumerable<OntologyProperty> properties = c.SuperClasses.SelectMany(clz => clz.IsDomainOf).Union(c.IsDomainOf).Where(prop => !prop.IsDeprecated());
-                foreach (OntologyProperty property in properties)
+                IEnumerable<OntologyProperty> directDomainProperties = c.IsDomainOf;
+                IEnumerable<OntologyProperty> indirectDomainProperties = c.SuperClasses.SelectMany(cls => cls.IsDomainOf);
+                IEnumerable<OntologyProperty> scopedDomainProperties = c.IsScopedDomainOf();
+                IEnumerable<OntologyProperty> allProperties = directDomainProperties.Union(indirectDomainProperties).Union(scopedDomainProperties);
+                foreach (OntologyProperty property in allProperties.Distinct(new OntologyResourceComparer()).Where(prop => !prop.IsDeprecated()))
                 {
                     // We only process (named) object and data properties with singleton ranges.
                     if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1) {

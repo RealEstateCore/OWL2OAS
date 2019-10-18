@@ -16,6 +16,15 @@ namespace OWL2OAS
             return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.ToString().Equals(OntologyHelper.OwlDatatypeProperty)).Any();
         }
 
+        public static IEnumerable<OntologyProperty> IsScopedDomainOf(this OntologyClass cls)
+        {
+            OntologyGraph graph = cls.Graph as OntologyGraph;
+            IUriNode onProperty = cls.Graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#onProperty"));
+            IEnumerable<IUriNode> propertyNodes = cls.SuperClasses.Where(superClass => superClass.IsRestriction())
+                .SelectMany(restriction => restriction.GetNodesViaProperty(onProperty)).UriNodes();
+            return propertyNodes.SelectMany(node => graph.OwlProperties.Where(oProperty => oProperty.Resource.Equals(node)));
+        }
+
         public static bool IsDeprecated(this OntologyResource resource)
         {
             IUriNode deprecated = resource.Graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#deprecated"));

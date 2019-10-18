@@ -191,18 +191,6 @@ GeoSPARQL is Copyright (c) 2012 Open Geospatial Consortium, Inc. All Rights Rese
     
 
 
-    <!-- https://w3id.org/rec/core/deviceQuantityKind -->
-
-    <owl:ObjectProperty rdf:about="https://w3id.org/rec/core/deviceQuantityKind">
-        <rdfs:subPropertyOf rdf:resource="https://w3id.org/rec/core/hasQuantityKind"/>
-        <rdfs:domain rdf:resource="https://w3id.org/rec/core/Device"/>
-        <rdfs:range rdf:resource="https://w3id.org/rec/core/QuantityKind"/>
-        <rdfs:comment xml:lang="en">The Quantity Kind that a device measures or affects.</rdfs:comment>
-        <rdfs:label xml:lang="en">device quantity kind</rdfs:label>
-    </owl:ObjectProperty>
-    
-
-
     <!-- https://w3id.org/rec/core/eventMeasurementUnit -->
 
     <owl:ObjectProperty rdf:about="https://w3id.org/rec/core/eventMeasurementUnit">
@@ -211,18 +199,6 @@ GeoSPARQL is Copyright (c) 2012 Open Geospatial Consortium, Inc. All Rights Rese
         <rdfs:range rdf:resource="https://w3id.org/rec/core/MeasurementUnit"/>
         <rdfs:comment xml:lang="en">A unit used to measure some aspect of some Event.</rdfs:comment>
         <rdfs:label xml:lang="en">event measurement unit</rdfs:label>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- https://w3id.org/rec/core/eventQuantityKind -->
-
-    <owl:ObjectProperty rdf:about="https://w3id.org/rec/core/eventQuantityKind">
-        <rdfs:subPropertyOf rdf:resource="https://w3id.org/rec/core/hasQuantityKind"/>
-        <rdfs:domain rdf:resource="https://w3id.org/rec/core/Event"/>
-        <rdfs:range rdf:resource="https://w3id.org/rec/core/QuantityKind"/>
-        <rdfs:comment xml:lang="en">The Quantity Kind that an event measures or affects.</rdfs:comment>
-        <rdfs:label xml:lang="en">event quantity kind</rdfs:label>
     </owl:ObjectProperty>
     
 
@@ -274,9 +250,9 @@ GeoSPARQL is Copyright (c) 2012 Open Geospatial Consortium, Inc. All Rights Rese
     
 
 
-    <!-- https://w3id.org/rec/core/hasQuantityKind -->
+    <!-- https://w3id.org/rec/core/quantityKind -->
 
-    <owl:ObjectProperty rdf:about="https://w3id.org/rec/core/hasQuantityKind">
+    <owl:ObjectProperty rdf:about="https://w3id.org/rec/core/quantityKind">
         <rdfs:range rdf:resource="https://w3id.org/rec/core/QuantityKind"/>
         <rdfs:comment xml:lang="en">Links entities that are measurable to the Quantity Kind that they measure, e.g., Temperature, Pressure, etc.</rdfs:comment>
         <rdfs:label xml:lang="en">has quantity kind</rdfs:label>
@@ -934,6 +910,12 @@ GeoSPARQL is Copyright (c) 2012 Open Geospatial Consortium, Inc. All Rights Rese
                 <owl:onProperty rdf:resource="https://w3id.org/rec/core/hasSuperDevice"/>
                 <owl:maxQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxQualifiedCardinality>
                 <owl:onClass rdf:resource="https://w3id.org/rec/core/Device"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="https://w3id.org/rec/core/quantityKind"/>
+                <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
