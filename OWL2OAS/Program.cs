@@ -61,6 +61,8 @@ namespace OWL2OAS
             EmbeddedResourceLoader.Load(g, "OWL2OAS.rec-core-3.0.rdf, OWL2OAS");
             IUriNode rootOntologyUriNode = g.CreateUriNode(g.BaseUri);
             Ontology rootOntology = new Ontology(rootOntologyUriNode, g);
+
+            // TODO: make the below optional through cmdline arg
             foreach (Ontology import in rootOntology.Imports)
             {
                 LoadImport(import, g);
@@ -157,7 +159,7 @@ namespace OWL2OAS
             schemas.Add("Context", contextSchema);
 
             // Iterate over all classes
-            foreach (OntologyClass c in g.OwlClasses.Where(oClass => oClass.IsNamed()))
+            foreach (OntologyClass c in g.OwlClasses.Where(oClass => oClass.IsNamed() && !oClass.IsDeprecated()))
             {
                 // Get human-readable label for API (should this be fetched from other metadata property?)
                 // TODO: pluralization metadata for clean API?
@@ -169,7 +171,7 @@ namespace OWL2OAS
 
                 // Iterate over superclasses, extract constraints
                 Dictionary<IUriNode, PropertyConstraint> constraints = new Dictionary<IUriNode, PropertyConstraint>();
-                foreach (OntologyClass superClass in c.DirectSuperClasses)
+                foreach (OntologyClass superClass in c.SuperClasses)
                 {
                     if (superClass.IsRestriction())
                     {
@@ -203,7 +205,7 @@ namespace OWL2OAS
                 schema.properties.Add("label", labelProperty);
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
-                IEnumerable<OntologyProperty> properties = c.SuperClasses.SelectMany(clz => clz.IsDomainOf).Union(c.IsDomainOf);
+                IEnumerable<OntologyProperty> properties = c.SuperClasses.SelectMany(clz => clz.IsDomainOf).Union(c.IsDomainOf).Where(prop => !prop.IsDeprecated());
                 foreach (OntologyProperty property in properties)
                 {
                     // We only process (named) object and data properties with singleton ranges.
