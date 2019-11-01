@@ -31,6 +31,43 @@ namespace OWL2OAS
 
         public class Components
         {
+            public struct Parameter
+            {
+                public string name;
+                [YamlMember(Alias = "in")]
+                public string inField { get { return "query"; } }
+                public string description;
+                public bool required { get { return false; } }
+                public Dictionary<string, string> schema;
+            }
+            public Dictionary<string, Parameter> parameters = new Dictionary<string, Parameter> {
+                { "offsetParam", new Parameter()
+                    {
+                        name = "offset",
+                        description = "Number of items to skip before returning the results.",
+                        schema = new Dictionary<string, string> {
+                            { "type", "integer" },
+                            { "format", "int32" },
+                            { "minimum", "0" },
+                            { "default", "0" },
+                        }
+                    }
+                },
+                {
+                    "limitParam", new Parameter()
+                    {
+                        name = "limit",
+                        description = "Maximum number of items to return.",
+                        schema = new Dictionary<string, string> {
+                            { "type", "integer" },
+                            { "format", "int32" },
+                            { "minimum", "1" },
+                            { "maximum", "100" },
+                            { "default", "20" },
+                        }
+                    }
+                }
+            };
             public Dictionary<string, Schema> schemas { get; set; }
         }
         
@@ -64,9 +101,19 @@ namespace OWL2OAS
             public string defaultValue { get; set; }
         }
 
-        public class ReferenceProperty: Property
+        public class ParameterReferenceProperty: Property
         {
-            public ReferenceProperty(string referenceType)
+            public ParameterReferenceProperty(string referenceType)
+            {
+                reference = "#/components/parameters/" + referenceType;
+            }
+            [YamlMember(Alias = "$ref")]
+            public string reference { get; set; }
+        }
+
+        public class SchemaReferenceProperty : Property
+        {
+            public SchemaReferenceProperty(string referenceType)
             {
                 reference = "#/components/schemas/" + referenceType;
             }
@@ -87,12 +134,18 @@ namespace OWL2OAS
         public class Verb
         {
             public string summary;
+            public List<ParameterReferenceProperty> parameters;
             public Dictionary<string, Response> responses { get; set; }
         }
 
         public class Get: Verb
         {
-            
+            public Get()
+            {
+                parameters = new List<ParameterReferenceProperty>();
+                parameters.Add(new OASDocument.ParameterReferenceProperty("offsetParam"));
+                parameters.Add(new OASDocument.ParameterReferenceProperty("limitParam"));
+            }
         }
 
         public class Response
@@ -104,7 +157,7 @@ namespace OWL2OAS
         public class Content
         {
             [YamlMember(ScalarStyle = ScalarStyle.DoubleQuoted)]
-            public Dictionary<string, string> schema { get; set; }
+            public Property schema { get; set; }
         }
     }
 }

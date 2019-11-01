@@ -251,7 +251,7 @@ namespace OWL2OAS
                 }
 
                 // Add reference to context schema
-                schema.properties.Add("@context", new OASDocument.ReferenceProperty("Context"));
+                schema.properties.Add("@context", new OASDocument.SchemaReferenceProperty("Context"));
 
                 // Add @id for all entries
                 OASDocument.Property idProperty = new OASDocument.Property();
@@ -397,6 +397,7 @@ namespace OWL2OAS
             }
         }
 
+        // TODO: move boilerplate code below into OASDocument
         private static void GenerateClassPaths(OntologyGraph g, OASDocument document)
         {
             // Iterate over all classes
@@ -413,21 +414,24 @@ namespace OWL2OAS
                 // TODO: PUT, PATCH, etc
                 // TODO: filtering, parameters, etc
                 path.get = new OASDocument.Get();
-                path.get.summary = "Get all '" + classLabel + "' objects.";
+                path.get.summary = "Get '" + classLabel + "' objects.";
+
                 path.get.responses = new Dictionary<string, OASDocument.Response>();
 
                 // Create each of the HTTP response types
                 OASDocument.Response response = new OASDocument.Response();
-                response.description = "A paged array of '" + classLabel + "' objects.";
+                response.description = "An array of '" + classLabel + "' objects.";
                 path.get.responses.Add("200", response);
 
                 response.content = new Dictionary<string, OASDocument.Content>();
                 OASDocument.Content content = new OASDocument.Content();
                 response.content.Add("application/jsonld", content);
 
-                // TODO: wrap responses in pagination?
-                content.schema = new Dictionary<string, string>();
-                content.schema.Add("$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel));
+                // Wrap responses in pagination
+                content.schema = new OASDocument.ArrayProperty()
+                {
+                    items = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel))
+                };
             }
         }
 
