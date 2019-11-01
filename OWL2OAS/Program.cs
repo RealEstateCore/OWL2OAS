@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Web;
+using CommandLine;
 using VDS.RDF;
 using VDS.RDF.Ontology;
 using VDS.RDF.Parsing;
@@ -12,6 +13,14 @@ namespace OWL2OAS
 {
     class Program
     {
+        public class Options
+        {
+            [Option('n', "no-imports", Required = false, HelpText = "Sets program to not follow owl:Imports declarations.")]
+            public bool NoImports { get; set; }
+            [Option('s', "server", Default = "http://localhost:8080/", Required = false, HelpText = "Sets the server URL (where presumably an API implementation is running).")]
+            public string Server { get; set; }
+        }
+
         /// <summary>
         /// The ontology being parsed.
         /// </summary>
@@ -21,6 +30,9 @@ namespace OWL2OAS
         /// Set of transitively imported child ontologies.
         /// </summary>
         private static readonly HashSet<Ontology> importedOntologies = new HashSet<Ontology>();
+
+        private static string _server;
+        private static bool _noImports;
 
         /// <summary>
         /// Dictionary mapping some common XSD data types to corresponding OSA data types and formats, see
@@ -83,6 +95,13 @@ namespace OWL2OAS
 
         static void Main(string[] args)
         {
+            Parser.Default.ParseArguments<Options>(args)
+                   .WithParsed<Options>(o =>
+                   {
+                       _noImports = o.NoImports;
+                       _server = o.Server;
+                   });
+
             // Load ontology graph
             OntologyGraph rootOntologyGraph = new OntologyGraph();
             //FileLoader.Load(g, args[0]);
@@ -90,10 +109,13 @@ namespace OWL2OAS
             IUriNode rootOntologyUriNode = rootOntologyGraph.CreateUriNode(rootOntologyGraph.BaseUri);
             rootOntology = new Ontology(rootOntologyUriNode, rootOntologyGraph);
 
-            // TODO: make the below optional through cmdline arg
-            foreach (Ontology import in rootOntology.Imports)
+            // If configured for it, parse owl:Imports
+            if (!_noImports)
             {
-                LoadImport(import);
+                foreach (Ontology import in rootOntology.Imports)
+                {
+                    LoadImport(import);
+                }
             }
 
             // Create OAS object
@@ -141,15 +163,8 @@ namespace OWL2OAS
                 document.info.description = string.Format("The documentation below is automatically extracted from a <dc:description> annotation on the ontology {0}:<br/><br/>*{1}*", rootOntology, ontologyDescription);
             }
 
-            // Server block            
-            if (args.Length > 0)
-            {
-                document.servers = new List<Dictionary<string, string>> { new Dictionary<string, string> { { "url", args[0] } } };
-            }
-            else
-            {
-                document.servers = new List<Dictionary<string, string>> { new Dictionary<string, string> { { "url", "http://localhost:8080/" } } };
-            }
+            // Server block
+            document.servers = new List<Dictionary<string, string>> { new Dictionary<string, string> { { "url", _server } } };
 
             // Parse OWL classes. For each class, create a schema and a path
             document.components = new OASDocument.Components();

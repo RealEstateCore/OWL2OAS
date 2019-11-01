@@ -16,6 +16,7 @@
   <ItemGroup>
     <PackageReference Include="dotNetRDF" Version="2.2.0" />
     <PackageReference Include="YamlDotNet" Version="6.1.2" />
+    <PackageReference Include="CommandLineParser" Version="2.6.0" />
   </ItemGroup>
 
 </Project>
