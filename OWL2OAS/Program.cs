@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Web;
 using VDS.RDF;
 using VDS.RDF.Ontology;
 using VDS.RDF.Parsing;
@@ -83,11 +84,11 @@ namespace OWL2OAS
         static void Main(string[] args)
         {
             // Load ontology graph
-            OntologyGraph g = new OntologyGraph();
+            OntologyGraph rootOntologyGraph = new OntologyGraph();
             //FileLoader.Load(g, args[0]);
-            EmbeddedResourceLoader.Load(g, "OWL2OAS.rec-core-3.0.rdf, OWL2OAS");
-            IUriNode rootOntologyUriNode = g.CreateUriNode(g.BaseUri);
-            rootOntology = new Ontology(rootOntologyUriNode, g);
+            EmbeddedResourceLoader.Load(rootOntologyGraph, "OWL2OAS.rec-core-3.0.rdf, OWL2OAS");
+            IUriNode rootOntologyUriNode = rootOntologyGraph.CreateUriNode(rootOntologyGraph.BaseUri);
+            rootOntology = new Ontology(rootOntologyUriNode, rootOntologyGraph);
 
             // TODO: make the below optional through cmdline arg
             foreach (Ontology import in rootOntology.Imports)
@@ -103,7 +104,7 @@ namespace OWL2OAS
             document.info = new OASDocument.Info();
 
             // Check for mandatory components (dc:title, version info, cc:license).
-            IUriNode dcTitle = g.CreateUriNode(new Uri("http://purl.org/dc/elements/1.1/title"));
+            IUriNode dcTitle = rootOntologyGraph.CreateUriNode(new Uri("http://purl.org/dc/elements/1.1/title"));
             if (!rootOntology.GetLiteralNodesViaProperty(dcTitle).Any())
             {
                 throw new RdfException(string.Format("Ontology <{0}> does not have an <dc:title> annotation.", rootOntology));
@@ -112,7 +113,7 @@ namespace OWL2OAS
             {
                 throw new RdfException(string.Format("Ontology <{0}> does not have an <owl:versionInfo> annotation.", rootOntology));
             }
-            IUriNode ccLicense = g.CreateUriNode(new Uri("http://creativecommons.org/ns#license"));
+            IUriNode ccLicense = rootOntologyGraph.CreateUriNode(new Uri("http://creativecommons.org/ns#license"));
             if (!rootOntology.GetNodesViaProperty(ccLicense).Where(objNode => objNode.IsLiteral() || objNode.IsUri()).Any())
             {
                 throw new RdfException(string.Format("Ontology <{0}> does not have an <cc:license> annotation that is a URI or literal.", rootOntology));
@@ -133,7 +134,7 @@ namespace OWL2OAS
             }
 
             // Non-mandatory info components, e.g., rdfs:comment
-            IUriNode dcDescription = g.CreateUriNode(new Uri("http://purl.org/dc/elements/1.1/description"));
+            IUriNode dcDescription = rootOntologyGraph.CreateUriNode(new Uri("http://purl.org/dc/elements/1.1/description"));
             if (rootOntology.GetLiteralNodesViaProperty(dcDescription).Any())
             {
                 string ontologyDescription = rootOntology.GetLiteralNodesViaProperty(dcDescription).OrderBy(description => description.HasLanguage()).First().Value.Trim().Replace("\r\n", "\n").Replace("\n", "<br/>");
@@ -153,7 +154,7 @@ namespace OWL2OAS
             // Parse OWL classes. For each class, create a schema and a path
             document.components = new OASDocument.Components();
             Dictionary<string, OASDocument.Schema> schemas = new Dictionary<string, OASDocument.Schema>();
-            Dictionary<string, OASDocument.Path> paths = new Dictionary<string, OASDocument.Path>();
+            document.paths = new Dictionary<string, OASDocument.Path>();
 
             // Set context based on the ontology IRI
             OASDocument.Property vocabularyProperty = new OASDocument.Property()
@@ -197,14 +198,30 @@ namespace OWL2OAS
             schemas.Add("Context", contextSchema);
             document.components.schemas = schemas;
 
-            GenerateClassSchemas(g, document);
-            // TODO iterate through imports here also
+            GenerateClassSchemas(rootOntologyGraph, document);
+            GenerateClassPaths(rootOntologyGraph, document);
 
-            document.paths = paths;
-            GenerateClassPaths(g, document);
-            // TODO iterate through imports here also
+            foreach (Ontology importedOntology in importedOntologies)
+            {
+                GenerateClassSchemas(importedOntology.Graph as OntologyGraph, document);
+                GenerateClassPaths(importedOntology.Graph as OntologyGraph, document);
+            }
 
             DumpAsYaml(document);
+        }
+
+        private static string GetKeyNameForClass(OntologyGraph graph, OntologyClass cls)
+        {
+            if (graph.Equals(rootOntology.Graph))
+            {
+                return cls.GetLocalName();
+            }
+            else
+            {
+                string prefix = importedOntologies.First(ontology => ontology.Graph.Equals(graph)).GetShortName();
+                string localName = cls.GetLocalName();
+                return string.Format("{0}:{1}", prefix, localName);
+            }
         }
 
         private static void GenerateClassSchemas(OntologyGraph graph, OASDocument document)
@@ -213,16 +230,7 @@ namespace OWL2OAS
             foreach (OntologyClass c in graph.OwlClasses.Where(oClass => oClass.IsNamed() && !oClass.IsDeprecated()))
             {
                 // Get key name for API
-                string classLabel;
-                if (graph.Equals(rootOntology.Graph)) {
-                    classLabel = c.GetLocalName();
-                }
-                else
-                {
-                    string prefix = importedOntologies.First(ontology => ontology.Graph.Equals(graph)).GetShortName();
-                    string localName = c.GetLocalName();
-                    classLabel = string.Format("{0}:{1}", prefix, localName);
-                }
+                string classLabel = GetKeyNameForClass(graph, c);
 
                 // Create schema for class and corresponding properties dict
                 OASDocument.Schema schema = new OASDocument.Schema();
@@ -394,7 +402,8 @@ namespace OWL2OAS
             // Iterate over all classes
             foreach (OntologyClass c in g.OwlClasses.Where(oClass => oClass.IsNamed() && !oClass.IsDeprecated()))
             {
-                string classLabel = c.GetLocalName();
+                // Get key name for API
+                string classLabel = GetKeyNameForClass(g, c);
 
                 // Create path for class
                 OASDocument.Path path = new OASDocument.Path();
@@ -418,7 +427,7 @@ namespace OWL2OAS
 
                 // TODO: wrap responses in pagination?
                 content.schema = new Dictionary<string, string>();
-                content.schema.Add("$ref", "#/components/schemas/" + classLabel);
+                content.schema.Add("$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel));
             }
         }
 

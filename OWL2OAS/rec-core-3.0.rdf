@@ -17,6 +17,7 @@
     <owl:Ontology rdf:about="https://w3id.org/rec/core/">
         <owl:versionIRI rdf:resource="https://w3id.org/rec/core/3.0/"/>
         <owl:imports rdf:resource="https://doc.realestatecore.io/3.1/metadata.rdf"/>
+        <owl:imports rdf:resource="https://doc.realestatecore.io/3.1/testOntology.rdf"/>
         <ns:license rdf:resource="https://opensource.org/licenses/MIT"/>
         <dc:creator>Erik Wallin</dc:creator>
         <dc:creator>Karl Hammar</dc:creator>
