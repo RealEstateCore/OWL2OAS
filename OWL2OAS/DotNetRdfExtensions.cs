@@ -147,6 +147,19 @@ namespace OWL2OAS
             }
         }
 
+        public static string GetNamespaceName(this IUriNode node)
+        {
+            if (node.Uri.Fragment.Length > 0)
+            {
+                return node.Uri.GetLeftPart(UriPartial.Path);
+            }
+            else
+            {
+                string link = node.Uri.GetLeftPart(UriPartial.Path);
+                return link.Substring(0, link.LastIndexOf("/") + 1);
+            }
+        }
+
         public static string GetLocalName(this OntologyResource resource)
         {
             if (resource.Resource.NodeType.Equals(NodeType.Uri))
@@ -157,6 +170,38 @@ namespace OWL2OAS
             { 
                 throw new RdfException(String.Format("{0} is not backed by a named URI node.", resource));
             }
+        }
+
+        public static string GetOntologyShortName(this Ontology ontology)
+        {
+            // Fallback way of getting a persistent short identifier in the
+            // (unlikely?) case that we are dealing w/ an anonymous ontology
+            if (!ontology.IsNamed())
+            {
+                return ontology.GetHashCode().ToString();
+            }
+
+            // This is a simple string handling thing
+            string ontologyUriString = ((IUriNode)ontology.Resource).Uri.ToString();
+
+            // Trim any occurences of entity separation characters
+            if (ontologyUriString.EndsWith("/") || ontologyUriString.EndsWith("#"))
+            {
+                char[] trimChars = { '/', '#' };
+                ontologyUriString = ontologyUriString.Trim(trimChars);
+            }
+
+            // Get the last bit of the string
+            ontologyUriString = ontologyUriString.Substring(ontologyUriString.LastIndexOf('/') + 1);
+
+            // If the string contains dots, treat them as file ending delimiter and get rid of them
+            // one at a time
+            while (ontologyUriString.Contains('.'))
+            {
+                ontologyUriString = ontologyUriString.Substring(0, ontologyUriString.LastIndexOf('.'));
+            }
+
+            return ontologyUriString;
         }
     }
 }

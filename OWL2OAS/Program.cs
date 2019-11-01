@@ -5,13 +5,18 @@ using System.Text;
 using VDS.RDF;
 using VDS.RDF.Ontology;
 using VDS.RDF.Parsing;
-using VDS.RDF.Query.Inference;
 using YamlDotNet.Serialization;
 
 namespace OWL2OAS
 {
     class Program
     {
+        private static IUriNode rootOntologyUriNode;
+
+        // Mapping of URI:s to prefix names. Used to generate @context block and to subsequently look up
+        // prefixes för class/property names in the schema.
+        private static Dictionary<Uri,string> prefixMappings = new Dictionary<Uri,string>();
+
         // Dictionary mapping some common XSD data types to corresponding OSA data types and formats, see
         // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#dataTypeFormat
         static readonly Dictionary<string, (string, string)> xsdOsaMappings = new Dictionary<string, (string, string)>
@@ -49,7 +54,7 @@ namespace OWL2OAS
             }
             public override string ToString()
             {
-                return String.Format("Property:\t<{0}>\nMin:\t{1}\nMax:\t{2}\nExactly:\t{3}",property, min, max, exactly);
+                return String.Format("Property:\t<{0}>\nMin:\t{1}\nMax:\t{2}\nExactly:\t{3}", property, min, max, exactly);
             }
         }
 
@@ -73,13 +78,14 @@ namespace OWL2OAS
             OntologyGraph g = new OntologyGraph();
             //FileLoader.Load(g, args[0]);
             EmbeddedResourceLoader.Load(g, "OWL2OAS.rec-core-3.0.rdf, OWL2OAS");
-            IUriNode rootOntologyUriNode = g.CreateUriNode(g.BaseUri);
+            rootOntologyUriNode = g.CreateUriNode(g.BaseUri);
             Ontology rootOntology = new Ontology(rootOntologyUriNode, g);
+            HashSet<OntologyGraph> importedGraphs = new HashSet<OntologyGraph>();
 
             // TODO: make the below optional through cmdline arg
             foreach (Ontology import in rootOntology.Imports)
             {
-                LoadImport(import, g);
+                LoadImport(import, importedGraphs);
             }
 
             // Create OAS object
@@ -93,7 +99,7 @@ namespace OWL2OAS
             IUriNode dcTitle = g.CreateUriNode(new Uri("http://purl.org/dc/elements/1.1/title"));
             if (!rootOntology.GetLiteralNodesViaProperty(dcTitle).Any())
             {
-                throw new RdfException(string.Format("Ontology <{0}> does not have an <dc:title> annotation.", rootOntology));   
+                throw new RdfException(string.Format("Ontology <{0}> does not have an <dc:title> annotation.", rootOntology));
             }
             if (!rootOntology.VersionInfo.Any())
             {
@@ -123,7 +129,7 @@ namespace OWL2OAS
             IUriNode dcDescription = g.CreateUriNode(new Uri("http://purl.org/dc/elements/1.1/description"));
             if (rootOntology.GetLiteralNodesViaProperty(dcDescription).Any())
             {
-                string ontologyDescription = rootOntology.GetLiteralNodesViaProperty(dcDescription).OrderBy(description => description.HasLanguage()).First().Value.Trim().Replace("\r\n","\n").Replace("\n", "<br/>");
+                string ontologyDescription = rootOntology.GetLiteralNodesViaProperty(dcDescription).OrderBy(description => description.HasLanguage()).First().Value.Trim().Replace("\r\n", "\n").Replace("\n", "<br/>");
                 document.info.description = string.Format("The documentation below is automatically extracted from a <dc:description> annotation on the ontology {0}:<br/><br/>*{1}*", rootOntology, ontologyDescription);
             }
 
@@ -171,15 +177,58 @@ namespace OWL2OAS
                     { "label", labelContextProperty }
                 }
             };
-            //contextSchema.properties.Add("@context", contextProperty);
+            // Add each prefix mapping to the context
+            foreach (KeyValuePair<Uri,string> entry in prefixMappings)
+            {
+                OASDocument.Property importedVocabularyProperty = new OASDocument.Property()
+                {
+                    type = "string",
+                    format = "uri",
+                    defaultValue = entry.Key.ToString()
+                };
+                contextSchema.properties.Add(entry.Value, importedVocabularyProperty);
+                contextSchema.required.Add(entry.Value);
+            }
             schemas.Add("Context", contextSchema);
+            document.components.schemas = schemas;
 
+            GenerateClassSchemas(g, document);
+            // TODO iterate through imports here also
+
+            document.paths = paths;
+            GenerateClassPaths(g, document);
+            // TODO iterate through imports here also
+
+            DumpAsYaml(document);
+        }
+
+        private static string GetKeyNameForNamedClass(OntologyGraph graph, OntologyClass cls)
+        {
+            if (!cls.IsNamed())
+            {
+                throw new RdfException(String.Format("{0} is not backed by a named URI node.", cls));
+            }
+            IUriNode clsNode = cls.Resource as IUriNode;
+            // If we are in the root graph, simply return the local name
+            if (graph.CreateUriNode(graph.BaseUri).Equals(rootOntologyUriNode))
+            {
+                return clsNode.GetLocalName();
+            }
+            else
+            {
+                string prefix = prefixMappings[clsNode.Uri];
+                string localName = clsNode.GetLocalName();
+                return string.Format("{0}:{1}", prefix, localName);
+            }
+        }
+
+        private static void GenerateClassSchemas(OntologyGraph g, OASDocument document)
+        {
             // Iterate over all classes
             foreach (OntologyClass c in g.OwlClasses.Where(oClass => oClass.IsNamed() && !oClass.IsDeprecated()))
             {
-                // Get human-readable label for API (should this be fetched from other metadata property?)
-                // TODO: pluralization metadata for clean API?
-                string classLabel = c.GetLocalName();
+                // Get key name for API
+                string classLabel = GetKeyNameForNamedClass(g, c);
 
                 // Create schema for class and corresponding properties dict
                 OASDocument.Schema schema = new OASDocument.Schema();
@@ -228,7 +277,8 @@ namespace OWL2OAS
                 foreach (OntologyProperty property in allProperties.Distinct(new OntologyResourceComparer()).Where(prop => !prop.IsDeprecated()))
                 {
                     // We only process (named) object and data properties with singleton ranges.
-                    if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1) {
+                    if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1)
+                    {
 
                         // Used for lookups against constraints dict
                         UriNode propertyNode = ((UriNode)property.Resource);
@@ -341,11 +391,20 @@ namespace OWL2OAS
                         }
                     }
                 }
-                schemas.Add(classLabel, schema);
+                document.components.schemas.Add(classLabel, schema);
+            }
+        }
+
+        private static void GenerateClassPaths(OntologyGraph g, OASDocument document)
+        {
+            // Iterate over all classes
+            foreach (OntologyClass c in g.OwlClasses.Where(oClass => oClass.IsNamed() && !oClass.IsDeprecated()))
+            {
+                string classLabel = c.GetLocalName();
 
                 // Create path for class
                 OASDocument.Path path = new OASDocument.Path();
-                paths.Add("/" + classLabel, path);
+                document.paths.Add("/" + classLabel, path);
 
                 // Create each of the HTTP methods
                 // TODO: PUT, PATCH, etc
@@ -353,7 +412,7 @@ namespace OWL2OAS
                 path.get = new OASDocument.Get();
                 path.get.summary = "Get all '" + classLabel + "' objects.";
                 path.get.responses = new Dictionary<string, OASDocument.Response>();
-                
+
                 // Create each of the HTTP response types
                 OASDocument.Response response = new OASDocument.Response();
                 response.description = "A paged array of '" + classLabel + "' objects.";
@@ -367,10 +426,6 @@ namespace OWL2OAS
                 content.schema = new Dictionary<string, string>();
                 content.schema.Add("$ref", "#/components/schemas/" + classLabel);
             }
-            document.components.schemas = schemas;
-            document.paths = paths;
-
-            DumpAsYaml(document);
         }
 
         private static void DumpAsYaml(object data)
@@ -431,38 +486,44 @@ namespace OWL2OAS
             return null;
         }
 
-        private static void LoadImport(Ontology importedOntology, OntologyGraph g)
+        private static void LoadImport(Ontology importedOntology, HashSet<OntologyGraph> importedGraphs)
         {
-            // Parse and load ontology from its URI
-            Uri importedOntologyUri = new Uri(importedOntology.Resource.ToString());
-            RdfXmlParser parser = new RdfXmlParser();
-            OntologyGraph importedOntologyGraph = new OntologyGraph();
-            try
-            {
-                UriLoader.Cache.Clear();
-                UriLoader.Load(importedOntologyGraph, importedOntologyUri, parser);
-            }
-            catch (RdfParseException e)
-            {
-                Console.Write(e.Message);
-                Console.Write(e.StackTrace);
-            }
+            // We only deal with names ontologies
+            if (importedOntology.Resource.IsUri()) {
 
-            // Fetch out the imported ontology's self-described URI from the imported graph
-            // This may differ from the URI given by the importing ontology (from which the file was fetched),
-            // due to .htaccess redirects, version URIs, etc.
-            Uri importedOntologySelfDefinedUri = importedOntologyGraph.BaseUri;
+                // Parse and load ontology from its URI
+                Uri importedOntologyUri = ((IUriNode)importedOntology.Resource).Uri;
+                OntologyGraph importedOntologyGraph = new OntologyGraph();
 
-            // Merge imported graph with root ontology graph
-            g.Merge(importedOntologyGraph);
+                try
+                {
+                    UriLoader.Cache.Clear();
+                    UriLoader.Load(importedOntologyGraph, importedOntologyUri);
+                }
+                catch (RdfParseException e)
+                {
+                    Console.Write(e.Message);
+                    Console.Write(e.StackTrace);
+                }
 
-            // Set up new ontology metadata object based on self-described imported URI
-            Ontology importedOntologyFromSelfDefinition = new Ontology(g.CreateUriNode(importedOntologySelfDefinedUri), g);
+                // Fetch out the imported ontology's URI from the imported graph's base URI.
+                // Note that this often differs from the URI given by the importing ontology
+                // (from which the file was fetched), due to .htaccess redirects, version URIs, etc.
+                Uri importedOntologyGraphBaseUri = importedOntologyGraph.BaseUri;
 
-            // Traverse import hierarchy
-            foreach (Ontology subImport in importedOntologyFromSelfDefinition.Imports)
-            {
-                LoadImport(subImport, g);
+                // Add ontology to prefix mappings used to generate contexts etc
+                string prefix = importedOntology.GetOntologyShortName();
+                prefixMappings[importedOntologyGraphBaseUri] = prefix;
+
+                // Add imported graph to list of imports for later processing
+                importedGraphs.Add(importedOntologyGraph);
+                
+                // Set up a new ontology metadata object, and traverse its import hierarchy transitively
+                Ontology importedOntologyFromSelfDefinition = new Ontology(importedOntologyGraph.CreateUriNode(importedOntologyGraphBaseUri), importedOntologyGraph);
+                foreach (Ontology subImport in importedOntologyFromSelfDefinition.Imports)
+                {
+                    LoadImport(subImport, importedGraphs);
+                }
             }
         }
     }
