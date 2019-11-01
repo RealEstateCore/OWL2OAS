@@ -172,7 +172,43 @@ namespace OWL2OAS
             }
         }
 
-        public static string GetOntologyShortName(this Ontology ontology)
+        public static bool HasVersionIri(this Ontology ontology)
+        {
+            IUriNode versionIri = ontology.Graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#versionIRI"));
+            return ontology.GetNodesViaProperty(versionIri).Any();
+        }
+
+        public static Uri GetVersionIri(this Ontology ontology)
+        {
+            if (!ontology.HasVersionIri())
+            {
+                throw new RdfException(string.Format("Ontology {0} does not have an owl:versionIRI annotation", ontology));
+            }
+
+            IUriNode versionIri = ontology.Graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#versionIRI"));
+            return ontology.GetNodesViaProperty(versionIri).Where(node => node.IsUri()).Select(node => (IUriNode)node).First().Uri;
+        }
+
+        public static Uri GetIri(this OntologyResource resource)
+        {
+            if (!resource.IsNamed())
+            {
+                throw new RdfException(string.Format("Ontology resource {0} does not have an IRI.", resource));
+            }
+
+            return ((UriNode)resource.Resource).Uri;
+        }
+
+        public static Uri GetVersionOrOntologyIri(this Ontology ontology)
+        {
+            if (ontology.HasVersionIri())
+            {
+                return ontology.GetVersionIri();
+            }
+            return ontology.GetIri();
+        }
+
+        public static string GetShortName(this Ontology ontology)
         {
             // Fallback way of getting a persistent short identifier in the
             // (unlikely?) case that we are dealing w/ an anonymous ontology
