@@ -470,13 +470,14 @@ namespace OWL2OAS
             // Create Get
             path.get = new OASDocument.Operation();
             path.get.summary = string.Format("Get a specific '{0}' object.", classLabel);
+            path.get.tags.Add(classLabel);
 
             // Add the ID parameter
             OASDocument.Parameter idParameter = new OASDocument.Parameter()
             {
                 name = "id",
                 description = string.Format("Id of '{0}' to return.", classLabel),
-                inField = OASDocument.Parameter.InFieldValues.path,
+                InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
                 schema = new Dictionary<string, string> {
                             { "type", "string" },
@@ -509,6 +510,7 @@ namespace OWL2OAS
             // Create Get
             path.get = new OASDocument.Operation();
             path.get.summary = "Get '" + classLabel + "' objects.";
+            path.get.tags.Add(classLabel);
 
             // Add pagination parameters
             path.get.parameters.Add(new OASDocument.Parameter() { ReferenceTo = "offsetParam" });

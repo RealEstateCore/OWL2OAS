@@ -184,6 +184,7 @@ namespace OWL2OAS
             public string summary;
             public List<Parameter> parameters = new List<Parameter>();
             public Dictionary<string, Response> responses { get; set; }
+            public List<string> tags = new List<string>();
         }
 
         public class Response
