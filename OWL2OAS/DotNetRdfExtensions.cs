@@ -208,6 +208,57 @@ namespace OWL2OAS
             return ontology.GetIri();
         }
 
+        public static bool HasBaseUriOntology(this OntologyGraph graph)
+        {
+            IUriNode baseUriNode = graph.CreateUriNode(graph.BaseUri);
+            IUriNode rdfType = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode owlOntology = graph.CreateUriNode(new Uri(OntologyHelper.OwlOntology));
+            return graph.ContainsTriple(new Triple(baseUriNode, rdfType, owlOntology));
+        }
+
+        public static Ontology GetBaseUriOntology(this OntologyGraph graph)
+        {
+            IUriNode ontologyUriNode = graph.CreateUriNode(graph.BaseUri);
+            return new Ontology(ontologyUriNode, graph);
+        }
+
+        /// <summary>
+        /// Gets all owl:Ontology nodes declared in the graph, packaged as Ontology objects.
+        /// </summary>
+        /// <param name="graph"></param>
+        /// <returns></returns>
+        public static IEnumerable<Ontology> GetOntologies(this OntologyGraph graph)
+        {
+            IUriNode rdfType = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode owlOntology = graph.CreateUriNode(new Uri(OntologyHelper.OwlOntology));
+            IEnumerable<IUriNode> ontologyNodes = graph.GetTriplesWithPredicateObject(rdfType, owlOntology)
+                .Select(triple => triple.Subject)
+                .UriNodes();
+            return ontologyNodes.Select(node => new Ontology(node, graph));
+        }
+
+        /// <summary>
+        /// Returns the "main" owl:Ontology declared in the the graph. Will
+        /// return the owl:Ontology whose identifier matches the RDF graph base
+        /// URI; if no such owl:Ontology is present, will return the first declared
+        /// owl:Ontology; if there are none, will throw an RdfException.
+        /// </summary>
+        /// <param name="graph"></param>
+        /// <returns></returns>
+        public static Ontology GetOntology(this OntologyGraph graph)
+        {
+            if (graph.HasBaseUriOntology())
+            {
+                return graph.GetBaseUriOntology();
+            }
+            IEnumerable<Ontology> graphOntologies = graph.GetOntologies();
+            if (graphOntologies.Any())
+            {
+                return graphOntologies.First();
+            }
+            throw new RdfException(String.Format("The graph {0} doesn't contain any owl:Ontology declarations.", graph));
+        }
+
         public static string GetShortName(this Ontology ontology)
         {
             // Fallback way of getting a persistent short identifier in the

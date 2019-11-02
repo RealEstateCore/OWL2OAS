@@ -136,8 +136,9 @@ namespace OWL2OAS
             {
                 UriLoader.Load(rootOntologyGraph, new Uri(_ontologyPath));
             }
-            IUriNode rootOntologyUriNode = rootOntologyGraph.CreateUriNode(rootOntologyGraph.BaseUri);
-            rootOntology = new Ontology(rootOntologyUriNode, rootOntologyGraph);
+
+            // Get the main ontology defined in the graph.
+            rootOntology = rootOntologyGraph.GetOntology();
 
             // If configured for it, parse owl:Imports
             if (!_noImports)
@@ -545,8 +546,8 @@ namespace OWL2OAS
         private static void LoadImport(Ontology importedOntology)
         {
             // TODO: Add check for already loaded ontologies, to break import loops
-            // We only deal with names ontologies
-            if (importedOntology.Resource.IsUri()) {
+            // We only deal with named ontologies
+            if (importedOntology.IsNamed()) {
 
                 // Parse and load ontology from its URI
                 Uri importedOntologyUri = ((IUriNode)importedOntology.Resource).Uri;
@@ -562,21 +563,13 @@ namespace OWL2OAS
                     Console.Write(e.StackTrace);
                 }
 
-                // Fetch out the imported ontology's URI from the imported graph's base URI.
-                // Note that this often differs from the URI given by the importing ontology
-                // (from which the file was fetched), due to .htaccess redirects, version URIs, etc.
-                Uri importedOntologyGraphBaseUri = importedOntologyGraph.BaseUri;
-
-                // Add ontology to prefix mappings used to generate contexts etc
-                string prefix = importedOntology.GetShortName();
-                //prefixMappings[importedOntologyGraphBaseUri] = prefix;
-
-                // Add imported graph to list of imports for later processing
-                //importedGraphs.Add(importedOntologyGraph);
-                
-                // Set up a new ontology metadata object, add it to the global imports collection
-                // and traverse its import hierarchy transitively
-                Ontology importedOntologyFromSelfDefinition = new Ontology(importedOntologyGraph.CreateUriNode(importedOntologyGraphBaseUri), importedOntologyGraph);
+                // Set up a new ontology metadata object from the imported ontology graph,
+                // add it to the global imports collection and traverse its import hierarchy
+                // transitively. 
+                // Note that this ontology IRI often differs from the URI given by
+                // the importing ontology above (from which the file was fetched),
+                // due to .htaccess redirects, version URIs, etc.
+                Ontology importedOntologyFromSelfDefinition = importedOntologyGraph.GetOntology();
                 importedOntologies.Add(importedOntologyFromSelfDefinition);
                 foreach (Ontology subImport in importedOntologyFromSelfDefinition.Imports)
                 {
