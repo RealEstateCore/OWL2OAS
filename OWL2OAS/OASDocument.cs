@@ -11,7 +11,39 @@ namespace OWL2OAS
         public string openapi { get { return "3.0.0"; } }
         public Info info { get; set; }
         public Components components { get; set; }
-        public Dictionary<string, Path> paths { get; set; }
+
+        /// <summary>
+        /// Initialise the paths block. By default holds only an HTTP GET for the JSON-LD @context endpoint.
+        /// </summary>
+        public Dictionary<string, Path> paths = new Dictionary<string, Path>()
+        {
+            { "/JsonLdContext", new Path()
+                {
+                    get = new Get()
+                    {
+                        // Reset default pagination parameters b/c this endpoint will not need pagination
+                        parameters = new List<ParameterReferenceProperty>(),
+                        summary = "Get the JSON-LD @context for this API, i.e., the set of ontologies that were used to generate the API.",
+                        responses = new Dictionary<string, Response>()
+                        {
+                            { "200", new Response()
+                                {
+                                    description = "A JSON-LD @context declaration.",
+                                    content = new Dictionary<string, Content>()
+                                    {
+                                        { "application/jsonld", new Content()
+                                            {
+                                                schema = new SchemaReferenceProperty("Context")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
         public List<Dictionary<string, string>> servers { get; set; }
 
         public class Info

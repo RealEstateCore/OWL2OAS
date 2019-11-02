@@ -199,7 +199,6 @@ namespace OWL2OAS
             // Parse OWL classes. For each class, create a schema and a path
             document.components = new OASDocument.Components();
             Dictionary<string, OASDocument.Schema> schemas = new Dictionary<string, OASDocument.Schema>();
-            document.paths = new Dictionary<string, OASDocument.Path>();
 
             // Set context based on the ontology IRI
             OASDocument.Property vocabularyProperty = new OASDocument.Property()
