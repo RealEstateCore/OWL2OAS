@@ -2,24 +2,26 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using VDS.RDF;
 using VDS.RDF.Ontology;
 using VDS.RDF.Parsing;
 
 namespace OWL2OAS
 {
+    /// <summary>
+    /// Various extensions to DotNetRdf, particularly relating to the <c>VDS.RDF.Ontology</c> functionality.
+    /// </summary>
     public static class DotNetRdfExtensions
     {
         public static bool IsDataProperty(this OntologyProperty property)
         {
-            return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.ToString().Equals(OntologyHelper.OwlDatatypeProperty)).Any();
+            return property.Types.UriNodes().Any(propertyType => propertyType.Uri.ToString().Equals(OntologyHelper.OwlDatatypeProperty));
         }
 
         public static IEnumerable<OntologyProperty> IsScopedDomainOf(this OntologyClass cls)
         {
             OntologyGraph graph = cls.Graph as OntologyGraph;
-            IUriNode onProperty = cls.Graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#onProperty"));
+            IUriNode onProperty = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#onProperty"));
             IEnumerable<IUriNode> propertyNodes = cls.SuperClasses.Where(superClass => superClass.IsRestriction())
                 .SelectMany(restriction => restriction.GetNodesViaProperty(onProperty)).UriNodes();
             return propertyNodes.SelectMany(node => graph.OwlProperties.Where(oProperty => oProperty.Resource.Equals(node)));
@@ -28,7 +30,7 @@ namespace OWL2OAS
         public static bool IsDeprecated(this OntologyResource resource)
         {
             IUriNode deprecated = resource.Graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#deprecated"));
-            return resource.GetNodesViaProperty(deprecated).Where(node => node.IsLiteral() && (node as ILiteralNode).Value == "true").Any();
+            return resource.GetNodesViaProperty(deprecated).LiteralNodes().Any(node => node.Value == "true");
         }
 
         public static bool IsDataProperty(this INode propertyNode)
@@ -41,7 +43,7 @@ namespace OWL2OAS
 
         public static bool IsObjectProperty(this OntologyProperty property)
         {
-            return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.ToString().Equals(OntologyHelper.OwlObjectProperty)).Any();
+            return property.Types.UriNodes().Any(propertyType => propertyType.Uri.ToString().Equals(OntologyHelper.OwlObjectProperty));
         }
 
         public static bool IsObjectProperty(this INode propertyNode)
@@ -54,7 +56,7 @@ namespace OWL2OAS
 
         public static bool IsAnnotationProperty(this OntologyProperty property)
         {
-            return property.Types.Where(propertyType => propertyType.NodeType == NodeType.Uri).Where(propertyType => ((UriNode)propertyType).Uri.ToString().Equals(OntologyHelper.OwlAnnotationProperty)).Any();
+            return property.Types.UriNodes().Any(propertyType => propertyType.Uri.ToString().Equals(OntologyHelper.OwlAnnotationProperty));
         }
 
         public static bool IsAnnotationProperty(this INode propertyNode)
@@ -72,22 +74,22 @@ namespace OWL2OAS
 
         public static bool IsRdfsDatatype(this OntologyClass oClass)
         {
-            return oClass.Types.Where(classType => classType.NodeType == NodeType.Uri).Where(classType => ((UriNode)classType).Uri.ToString().Equals("http://www.w3.org/2000/01/rdf-schema#Datatype")).Any();
+            return oClass.Types.UriNodes().Any(classType => classType.Uri.Equals(VocabularyHelper.RDFS.Datatype));
         }
 
         public static bool IsRestriction(this OntologyClass oClass)
         {
-            return oClass.Types.Where(classType => classType.NodeType == NodeType.Uri).Where(classType => ((UriNode)classType).Uri.ToString().Equals("http://www.w3.org/2002/07/owl#Restriction")).Any();
+            return oClass.Types.UriNodes().Any(classType => classType.Uri.Equals(VocabularyHelper.OWL.Restriction));
         }
 
         public static bool IsFunctional(this OntologyProperty property)
         {
-            return property.Types.Where(propertyType => propertyType.IsUri() && ((UriNode)propertyType).Uri.ToString().Equals("http://www.w3.org/2002/07/owl#FunctionalProperty")).Any();
+            return property.Types.UriNodes().Any(propertyType => propertyType.Uri.Equals(VocabularyHelper.OWL.FunctionalProperty));
         }
 
-        public static bool IsNamed(this OntologyResource resource)
+        public static bool IsNamed(this OntologyResource ontResource)
         {
-            return resource.Resource.NodeType.Equals(NodeType.Uri);
+            return ontResource.Resource.IsUri();
         }
 
         public static bool IsLiteral(this INode node)
@@ -102,7 +104,7 @@ namespace OWL2OAS
 
         public static bool IsEnglish(this ILiteralNode node)
         {
-            return (node.Language.Equals("en") || node.Language.StartsWith("en-"));
+            return node.Language.Equals("en") || node.Language.StartsWith("en-", StringComparison.Ordinal);
         }
 
         public static bool HasLanguage(this ILiteralNode node)
@@ -113,7 +115,8 @@ namespace OWL2OAS
         public static bool IsInteger(this ILiteralNode node)
         {
             string datatype = node.DataType.ToString();
-            return (datatype.StartsWith(XmlSpecsHelper.NamespaceXmlSchema) && (datatype.EndsWith("Integer") ||datatype.EndsWith("Int")));
+            return datatype.StartsWith(XmlSpecsHelper.NamespaceXmlSchema, StringComparison.Ordinal)
+                && (datatype.EndsWith("Integer", StringComparison.Ordinal) || datatype.EndsWith("Int", StringComparison.Ordinal));
         }
 
         public static IEnumerable<INode> GetNodesViaProperty(this OntologyResource resource, INode property)
@@ -121,16 +124,11 @@ namespace OWL2OAS
             return resource.Graph.GetTriplesWithSubjectPredicate(resource.Resource, property).Select(triple => triple.Object);
         }
 
-        public static IEnumerable<ILiteralNode> GetLiteralNodesViaProperty(this OntologyResource resource, INode property)
-        {
-            return resource.GetNodesViaProperty(property).Where(node => node.NodeType == NodeType.Literal).Select(node => node as ILiteralNode);
-        }
-
         public static bool IsXsdDatatype(this OntologyClass oClass)
         {
             if (oClass.IsNamed())
             {
-                return oClass.GetIri().ToString().StartsWith(XmlSpecsHelper.NamespaceXmlSchema);
+                return oClass.GetIri().ToString().StartsWith(XmlSpecsHelper.NamespaceXmlSchema, StringComparison.Ordinal);
             }
             return false;
         }
@@ -141,10 +139,7 @@ namespace OWL2OAS
             {
                 return node.Uri.Fragment.Trim('#');
             }
-            else
-            {
-                return Path.GetFileName(node.Uri.AbsolutePath);
-            }
+            return Path.GetFileName(node.Uri.AbsolutePath);
         }
 
         public static string GetNamespaceName(this IUriNode node)
@@ -153,29 +148,23 @@ namespace OWL2OAS
             {
                 return node.Uri.GetLeftPart(UriPartial.Path);
             }
-            else
-            {
-                string link = node.Uri.GetLeftPart(UriPartial.Path);
-                return link.Substring(0, link.LastIndexOf("/") + 1);
-            }
+            string link = node.Uri.GetLeftPart(UriPartial.Path);
+            return link.Substring(0, link.LastIndexOf("/", StringComparison.Ordinal) + 1);
         }
 
         public static string GetLocalName(this OntologyResource resource)
         {
-            if (resource.Resource.NodeType.Equals(NodeType.Uri))
+            if (resource.IsNamed())
             {
                 return ((UriNode)resource.Resource).GetLocalName();
             }
-            else
-            { 
-                throw new RdfException(String.Format("{0} is not backed by a named URI node.", resource));
-            }
+            throw new RdfException(string.Format("{0} is not backed by a named URI node.", resource));
         }
 
         public static bool HasVersionIri(this Ontology ontology)
         {
-            IUriNode versionIri = ontology.Graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#versionIRI"));
-            return ontology.GetNodesViaProperty(versionIri).Any();
+            IUriNode versionIri = ontology.Graph.CreateUriNode(VocabularyHelper.OWL.versionIRI);
+            return ontology.GetNodesViaProperty(versionIri).UriNodes().Any();
         }
 
         public static Uri GetVersionIri(this Ontology ontology)
@@ -185,8 +174,8 @@ namespace OWL2OAS
                 throw new RdfException(string.Format("Ontology {0} does not have an owl:versionIRI annotation", ontology));
             }
 
-            IUriNode versionIri = ontology.Graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#versionIRI"));
-            return ontology.GetNodesViaProperty(versionIri).Where(node => node.IsUri()).Select(node => (IUriNode)node).First().Uri;
+            IUriNode versionIri = ontology.Graph.CreateUriNode(VocabularyHelper.OWL.versionIRI);
+            return ontology.GetNodesViaProperty(versionIri).UriNodes().First().Uri;
         }
 
         public static Uri GetIri(this OntologyResource resource)
@@ -199,6 +188,13 @@ namespace OWL2OAS
             return ((UriNode)resource.Resource).Uri;
         }
 
+        /// <summary>
+        /// Gets the version IRI of the ontology, if it is defined, or the ontology
+        /// IRI if it is not. If neither is defined (i.e. the ontology is anonymous),
+        /// throws an exception.
+        /// </summary>
+        /// <param name="ontology"></param>
+        /// <returns></returns>
         public static Uri GetVersionOrOntologyIri(this Ontology ontology)
         {
             if (ontology.HasVersionIri())
@@ -256,9 +252,16 @@ namespace OWL2OAS
             {
                 return graphOntologies.First();
             }
-            throw new RdfException(String.Format("The graph {0} doesn't contain any owl:Ontology declarations.", graph));
+            throw new RdfException(string.Format("The graph {0} doesn't contain any owl:Ontology declarations.", graph));
         }
 
+        /// <summary>
+        /// Gets a short name representation for an ontology, based on the last segment
+        /// of the ontology IRI or (in the case of anonymous ontologies) the ontology hash.
+        /// Useful for qname prefixes.
+        /// </summary>
+        /// <param name="ontology"></param>
+        /// <returns></returns>
         public static string GetShortName(this Ontology ontology)
         {
             // Fallback way of getting a persistent short identifier in the
@@ -272,7 +275,7 @@ namespace OWL2OAS
             string ontologyUriString = ontology.GetIri().ToString();
 
             // Trim any occurences of entity separation characters
-            if (ontologyUriString.EndsWith("/") || ontologyUriString.EndsWith("#"))
+            if (ontologyUriString.EndsWith("/", StringComparison.Ordinal) || ontologyUriString.EndsWith("#", StringComparison.Ordinal))
             {
                 char[] trimChars = { '/', '#' };
                 ontologyUriString = ontologyUriString.Trim(trimChars);

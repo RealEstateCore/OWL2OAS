@@ -157,8 +157,8 @@ namespace OWL2OAS
             document.info = new OASDocument.Info();
 
             // Check for mandatory components (dc:title, version info, cc:license).
-            IUriNode dcTitle = rootOntologyGraph.CreateUriNode(new Uri("http://purl.org/dc/elements/1.1/title"));
-            if (!rootOntology.GetLiteralNodesViaProperty(dcTitle).Any())
+            IUriNode dcTitle = rootOntologyGraph.CreateUriNode(VocabularyHelper.DC.title);
+            if (!rootOntology.GetNodesViaProperty(dcTitle).LiteralNodes().Any())
             {
                 throw new RdfException(string.Format("Ontology <{0}> does not have an <dc:title> annotation.", rootOntology));
             }
@@ -166,13 +166,12 @@ namespace OWL2OAS
             {
                 throw new RdfException(string.Format("Ontology <{0}> does not have an <owl:versionInfo> annotation.", rootOntology));
             }
-            IUriNode ccLicense = rootOntologyGraph.CreateUriNode(new Uri("http://creativecommons.org/ns#license"));
+            IUriNode ccLicense = rootOntologyGraph.CreateUriNode(VocabularyHelper.CC.license);
             if (!rootOntology.GetNodesViaProperty(ccLicense).Where(objNode => objNode.IsLiteral() || objNode.IsUri()).Any())
             {
                 throw new RdfException(string.Format("Ontology <{0}> does not have an <cc:license> annotation that is a URI or literal.", rootOntology));
             }
-
-            document.info.title = rootOntology.GetLiteralNodesViaProperty(dcTitle).OrderBy(title => title.HasLanguage()).First().Value;
+            document.info.title = rootOntology.GetNodesViaProperty(dcTitle).LiteralNodes().OrderBy(title => title.HasLanguage()).First().Value;
             document.info.version = rootOntology.VersionInfo.OrderBy(versionInfo => versionInfo.HasLanguage()).First().Value;
             document.info.license = new OASDocument.License();
             INode licenseNode = rootOntology.GetNodesViaProperty(ccLicense).OrderBy(node => node.NodeType).First();
@@ -187,10 +186,10 @@ namespace OWL2OAS
             }
 
             // Non-mandatory info components, e.g., rdfs:comment
-            IUriNode dcDescription = rootOntologyGraph.CreateUriNode(new Uri("http://purl.org/dc/elements/1.1/description"));
-            if (rootOntology.GetLiteralNodesViaProperty(dcDescription).Any())
+            IUriNode dcDescription = rootOntologyGraph.CreateUriNode(VocabularyHelper.DC.description);
+            if (rootOntology.GetNodesViaProperty(dcDescription).LiteralNodes().Any())
             {
-                string ontologyDescription = rootOntology.GetLiteralNodesViaProperty(dcDescription).OrderBy(description => description.HasLanguage()).First().Value.Trim().Replace("\r\n", "\n").Replace("\n", "<br/>");
+                string ontologyDescription = rootOntology.GetNodesViaProperty(dcDescription).LiteralNodes().OrderBy(description => description.HasLanguage()).First().Value.Trim().Replace("\r\n", "\n").Replace("\n", "<br/>");
                 document.info.description = string.Format("The documentation below is automatically extracted from a <dc:description> annotation on the ontology {0}:<br/><br/>*{1}*", rootOntology, ontologyDescription);
             }
 
@@ -217,7 +216,7 @@ namespace OWL2OAS
             {
                 type = "string",
                 format = "uri",
-                defaultValue = "http://www.w3.org/2000/01/rdf-schema#label"
+                defaultValue = VocabularyHelper.RDFS.label.ToString()
             };
             OASDocument.Schema contextSchema = new OASDocument.Schema()
             {
@@ -492,14 +491,14 @@ namespace OWL2OAS
         private static PropertyConstraint? ExtractRestriction(OntologyClass restriction)
         {
             OntologyGraph graph = restriction.Graph as OntologyGraph;
-            IUriNode onProperty = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#onProperty"));
-            IUriNode cardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#cardinality"));
-            IUriNode qualifiedCardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#qualifiedCardinality"));
-            IUriNode someValuesFrom = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#someValuesFrom"));
-            IUriNode minCardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#minCardinality"));
-            IUriNode minQualifiedCardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#minQualifiedCardinality"));
-            IUriNode maxCardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#maxCardinality"));
-            IUriNode maxQualifiedCardinality = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#maxQualifiedCardinality"));
+            IUriNode onProperty = graph.CreateUriNode(VocabularyHelper.OWL.onProperty);
+            IUriNode cardinality = graph.CreateUriNode(VocabularyHelper.OWL.cardinality);
+            IUriNode qualifiedCardinality = graph.CreateUriNode(VocabularyHelper.OWL.qualifiedCardinality);
+            IUriNode someValuesFrom = graph.CreateUriNode(VocabularyHelper.OWL.someValuesFrom);
+            IUriNode minCardinality = graph.CreateUriNode(VocabularyHelper.OWL.minCardinality);
+            IUriNode minQualifiedCardinality = graph.CreateUriNode(VocabularyHelper.OWL.minQualifiedCardinality);
+            IUriNode maxCardinality = graph.CreateUriNode(VocabularyHelper.OWL.maxCardinality);
+            IUriNode maxQualifiedCardinality = graph.CreateUriNode(VocabularyHelper.OWL.maxQualifiedCardinality);
 
             if (restriction.GetNodesViaProperty(onProperty).UriNodes().Where(node => node.IsOntologyProperty()).Count() == 1)
             {
