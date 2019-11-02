@@ -19,10 +19,8 @@ namespace OWL2OAS
         {
             { "/JsonLdContext", new Path()
                 {
-                    get = new Get()
+                    get = new Operation()
                     {
-                        // Reset default pagination parameters b/c this endpoint will not need pagination
-                        parameters = new List<ParameterReferenceProperty>(),
                         summary = "Get the JSON-LD @context for this API, i.e., the set of ontologies that were used to generate the API.",
                         responses = new Dictionary<string, Response>()
                         {
@@ -61,22 +59,48 @@ namespace OWL2OAS
             public string url;
         }
 
+        public class Parameter
+        {
+            private string _referenceTo;
+            [YamlMember(Alias = "$ref")]
+            public string ReferenceTo
+            {
+                get
+                {
+                    return _referenceTo;
+                }
+                set
+                {
+                    _referenceTo = "#/components/parameters/"  + value;
+                }
+            }
+
+            public enum InFieldValues
+            {
+                path = 1,
+                query = 2,
+                header = 3,
+                cookie = 4
+            }
+
+            public string name;
+            [YamlMember(Alias = "in")]
+            public InFieldValues InField { get; set; }
+            public string description;
+            public bool required;
+            public Dictionary<string, string> schema;
+        }
+
         public class Components
         {
-            public struct Parameter
-            {
-                public string name;
-                [YamlMember(Alias = "in")]
-                public string inField { get { return "query"; } }
-                public string description;
-                public bool required { get { return false; } }
-                public Dictionary<string, string> schema;
-            }
+
             public Dictionary<string, Parameter> parameters = new Dictionary<string, Parameter> {
                 { "offsetParam", new Parameter()
                     {
                         name = "offset",
                         description = "Number of items to skip before returning the results.",
+                        InField = Parameter.InFieldValues.query,
+                        required = false,
                         schema = new Dictionary<string, string> {
                             { "type", "integer" },
                             { "format", "int32" },
@@ -90,6 +114,8 @@ namespace OWL2OAS
                     {
                         name = "limit",
                         description = "Maximum number of items to return.",
+                        InField = Parameter.InFieldValues.query,
+                        required = false,
                         schema = new Dictionary<string, string> {
                             { "type", "integer" },
                             { "format", "int32" },
@@ -133,16 +159,6 @@ namespace OWL2OAS
             public string defaultValue { get; set; }
         }
 
-        public class ParameterReferenceProperty: Property
-        {
-            public ParameterReferenceProperty(string referenceType)
-            {
-                reference = "#/components/parameters/" + referenceType;
-            }
-            [YamlMember(Alias = "$ref")]
-            public string reference { get; set; }
-        }
-
         public class SchemaReferenceProperty : Property
         {
             public SchemaReferenceProperty(string referenceType)
@@ -160,24 +176,14 @@ namespace OWL2OAS
 
         public class Path
         {
-            public Get get { get; set; }
+            public Operation get { get; set; }
         }
 
-        public class Verb
+        public class Operation
         {
             public string summary;
-            public List<ParameterReferenceProperty> parameters;
+            public List<Parameter> parameters = new List<Parameter>();
             public Dictionary<string, Response> responses { get; set; }
-        }
-
-        public class Get: Verb
-        {
-            public Get()
-            {
-                parameters = new List<ParameterReferenceProperty>();
-                parameters.Add(new OASDocument.ParameterReferenceProperty("offsetParam"));
-                parameters.Add(new OASDocument.ParameterReferenceProperty("limitParam"));
-            }
         }
 
         public class Response

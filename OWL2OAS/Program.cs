@@ -451,32 +451,88 @@ namespace OWL2OAS
                 string classLabel = GetKeyNameForClass(g, c);
 
                 // Create path for class
-                OASDocument.Path path = new OASDocument.Path();
-                document.paths.Add("/" + classLabel, path);
+                OASDocument.Path getAllObjectsPath = GenerateGetAllObjectsPath(classLabel);
+                document.paths.Add(string.Format("/{0}", classLabel), getAllObjectsPath);
+                OASDocument.Path getSingleObjectPath = GenerateGetSingleObjectPath(classLabel);
+                document.paths.Add(string.Format("/{0}/{{id}}", classLabel), getSingleObjectPath);
 
                 // Create each of the HTTP methods
                 // TODO: PUT, PATCH, etc
                 // TODO: filtering, parameters, etc
-                path.get = new OASDocument.Get();
-                path.get.summary = "Get '" + classLabel + "' objects.";
-
-                path.get.responses = new Dictionary<string, OASDocument.Response>();
-
-                // Create each of the HTTP response types
-                OASDocument.Response response = new OASDocument.Response();
-                response.description = "An array of '" + classLabel + "' objects.";
-                path.get.responses.Add("200", response);
-
-                response.content = new Dictionary<string, OASDocument.Content>();
-                OASDocument.Content content = new OASDocument.Content();
-                response.content.Add("application/jsonld", content);
-
-                // Wrap responses in pagination
-                content.schema = new OASDocument.ArrayProperty()
-                {
-                    items = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel))
-                };
             }
+        }
+
+        private static OASDocument.Path GenerateGetSingleObjectPath(string classLabel)
+        {
+            // Create path for class
+            OASDocument.Path path = new OASDocument.Path();
+
+            // Create Get
+            path.get = new OASDocument.Operation();
+            path.get.summary = string.Format("Get a specific '{0}' object.", classLabel);
+
+            // Add the ID parameter
+            OASDocument.Parameter idParameter = new OASDocument.Parameter()
+            {
+                name = "id",
+                description = string.Format("Id of '{0}' to return.", classLabel),
+                inField = OASDocument.Parameter.InFieldValues.path,
+                required = true,
+                schema = new Dictionary<string, string> {
+                            { "type", "string" },
+                        }
+            };
+            path.get.parameters.Add(idParameter);
+
+            path.get.responses = new Dictionary<string, OASDocument.Response>();
+
+            // Create each of the HTTP response types
+            OASDocument.Response response = new OASDocument.Response();
+            response.description = string.Format("A '{0}' object.", classLabel);
+            path.get.responses.Add("200", response);
+
+            response.content = new Dictionary<string, OASDocument.Content>();
+            OASDocument.Content content = new OASDocument.Content();
+            response.content.Add("application/jsonld", content);
+
+            // Response is per previously defined schema
+            content.schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+
+            return path;
+        }
+
+        private static OASDocument.Path GenerateGetAllObjectsPath(string classLabel)
+        {
+            // Create path for class
+            OASDocument.Path path = new OASDocument.Path();
+
+            // Create Get
+            path.get = new OASDocument.Operation();
+            path.get.summary = "Get '" + classLabel + "' objects.";
+
+            // Add pagination parameters
+            path.get.parameters.Add(new OASDocument.Parameter() { ReferenceTo = "offsetParam" });
+            path.get.parameters.Add(new OASDocument.Parameter() { ReferenceTo = "limitParam" });
+
+            path.get.responses = new Dictionary<string, OASDocument.Response>();
+
+            // Create each of the HTTP response types
+            OASDocument.Response response = new OASDocument.Response();
+            response.description = "An array of '" + classLabel + "' objects.";
+            path.get.responses.Add("200", response);
+
+            response.content = new Dictionary<string, OASDocument.Content>();
+            OASDocument.Content content = new OASDocument.Content();
+            response.content.Add("application/jsonld", content);
+
+            // Wrap responses in array
+            content.schema = new OASDocument.ArrayProperty()
+            {
+                items = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel))
+            };
+
+            // Return
+            return path;
         }
 
         private static void DumpAsYaml(object data)
