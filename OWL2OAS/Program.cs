@@ -17,8 +17,12 @@ namespace OWL2OAS
         {
             [Option('n', "no-imports", Required = false, HelpText = "Sets program to not follow owl:Imports declarations.")]
             public bool NoImports { get; set; }
-            [Option('s', "server", Default = "http://localhost:8080/", Required = false, HelpText = "Sets the server URL (where presumably an API implementation is running).")]
+            [Option('s', "server", Default = "http://localhost:8080/", Required = false, HelpText = "The server URL (where presumably an API implementation is running).")]
             public string Server { get; set; }
+            [Option('f', "file-path", Required = true, HelpText = "The path to the on-disk root ontology file to translate.", SetName = "fileOntology")]
+            public string FilePath { get; set; }
+            [Option('u', "uri-path", Required = true, HelpText = "The URI of the root ontology file to translate.", SetName = "uriOntology")]
+            public string UriPath { get; set; }
         }
 
         /// <summary>
@@ -31,8 +35,11 @@ namespace OWL2OAS
         /// </summary>
         private static readonly HashSet<Ontology> importedOntologies = new HashSet<Ontology>();
 
+        // Various configuration fields
         private static string _server;
         private static bool _noImports;
+        private static bool _localOntology;
+        private static string _ontologyPath;
 
         /// <summary>
         /// Dictionary mapping some common XSD data types to corresponding OSA data types and formats, see
@@ -100,12 +107,35 @@ namespace OWL2OAS
                    {
                        _noImports = o.NoImports;
                        _server = o.Server;
+                       if (o.FilePath != null)
+                       {
+                           _localOntology = true;
+                           _ontologyPath = o.FilePath;
+                       }
+                       else
+                       {
+                           _localOntology = false;
+                           _ontologyPath = o.UriPath;
+                       }
+                   })
+                   .WithNotParsed<Options>((errs) =>
+                   {
+                       Environment.Exit(1);
                    });
 
-            // Load ontology graph
+            // Clear cache from any prior runs
+            UriLoader.Cache.Clear();
+
+            // Load ontology graph from local or remote path
             OntologyGraph rootOntologyGraph = new OntologyGraph();
-            //FileLoader.Load(g, args[0]);
-            EmbeddedResourceLoader.Load(rootOntologyGraph, "OWL2OAS.rec-core-3.0.rdf, OWL2OAS");
+            if (_localOntology)
+            {
+                FileLoader.Load(rootOntologyGraph, _ontologyPath);
+            }
+            else
+            {
+                UriLoader.Load(rootOntologyGraph, new Uri(_ontologyPath));
+            }
             IUriNode rootOntologyUriNode = rootOntologyGraph.CreateUriNode(rootOntologyGraph.BaseUri);
             rootOntology = new Ontology(rootOntologyUriNode, rootOntologyGraph);
 
@@ -515,6 +545,7 @@ namespace OWL2OAS
         /// <param name="importedOntology">The ontology to import.</param>
         private static void LoadImport(Ontology importedOntology)
         {
+            // TODO: Add check for already loaded ontologies, to break import loops
             // We only deal with names ontologies
             if (importedOntology.Resource.IsUri()) {
 
@@ -524,7 +555,6 @@ namespace OWL2OAS
 
                 try
                 {
-                    UriLoader.Cache.Clear();
                     UriLoader.Load(importedOntologyGraph, importedOntologyUri);
                 }
                 catch (RdfParseException e)
