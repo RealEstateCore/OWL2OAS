@@ -545,7 +545,6 @@ namespace OWL2OAS
         /// <param name="importedOntology">The ontology to import.</param>
         private static void LoadImport(Ontology importedOntology)
         {
-            // TODO: Add check for already loaded ontologies, to break import loops
             // We only deal with named ontologies
             if (importedOntology.IsNamed()) {
 
@@ -563,17 +562,24 @@ namespace OWL2OAS
                     Console.Write(e.StackTrace);
                 }
 
-                // Set up a new ontology metadata object from the imported ontology graph,
-                // add it to the global imports collection and traverse its import hierarchy
-                // transitively. 
-                // Note that this ontology IRI often differs from the URI given by
-                // the importing ontology above (from which the file was fetched),
-                // due to .htaccess redirects, version URIs, etc.
-                Ontology importedOntologyFromSelfDefinition = importedOntologyGraph.GetOntology();
-                importedOntologies.Add(importedOntologyFromSelfDefinition);
-                foreach (Ontology subImport in importedOntologyFromSelfDefinition.Imports)
-                {
-                    LoadImport(subImport);
+                // Only proceed if we have not seen this graph before, otherwise we
+                // risk unecessary fetches and computation, and possibly import loops.
+                // TODO: Replace the below with proper equals() comparisson on the Ontology
+                if (!importedOntologies.Select(ontology => ontology.Graph).Contains(importedOntologyGraph)) { 
+
+                    // Set up a new ontology metadata object from the imported ontology graph,
+                    // add it to the global imports collection and traverse its import hierarchy
+                    // transitively (if we haven't imported it before).
+                    // Note that this ontology IRI often differs from the URI given by
+                    // the importing ontology above (from which the file was fetched),
+                    // due to .htaccess redirects, version URIs, etc.
+                    Ontology importedOntologyFromSelfDefinition = importedOntologyGraph.GetOntology();
+                
+                    importedOntologies.Add(importedOntologyFromSelfDefinition);
+                    foreach (Ontology subImport in importedOntologyFromSelfDefinition.Imports)
+                    {
+                        LoadImport(subImport);
+                    }
                 }
             }
         }

@@ -128,9 +128,9 @@ namespace OWL2OAS
 
         public static bool IsXsdDatatype(this OntologyClass oClass)
         {
-            if (oClass.Resource.NodeType.Equals(NodeType.Uri))
+            if (oClass.IsNamed())
             {
-                return (((UriNode)oClass.Resource).Uri.ToString().StartsWith(XmlSpecsHelper.NamespaceXmlSchema));
+                return oClass.GetIri().ToString().StartsWith(XmlSpecsHelper.NamespaceXmlSchema);
             }
             return false;
         }
@@ -269,7 +269,7 @@ namespace OWL2OAS
             }
 
             // This is a simple string handling thing
-            string ontologyUriString = ((IUriNode)ontology.Resource).Uri.ToString();
+            string ontologyUriString = ontology.GetIri().ToString();
 
             // Trim any occurences of entity separation characters
             if (ontologyUriString.EndsWith("/") || ontologyUriString.EndsWith("#"))
