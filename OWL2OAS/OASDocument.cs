@@ -177,13 +177,14 @@ namespace OWL2OAS
         public class Path
         {
             public Operation get { get; set; }
+            public Operation put { get; set; }
         }
 
         public class Operation
         {
             public string summary;
             public List<Parameter> parameters = new List<Parameter>();
-            public Dictionary<string, Response> responses { get; set; }
+            public Dictionary<string, Response> responses = new Dictionary<string, Response>();
             public List<string> tags = new List<string>();
         }
 

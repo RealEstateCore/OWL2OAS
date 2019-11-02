@@ -450,27 +450,25 @@ namespace OWL2OAS
                 // Get key name for API
                 string classLabel = GetKeyNameForClass(g, c);
 
-                // Create path for class
-                OASDocument.Path getAllObjectsPath = GenerateGetAllObjectsPath(classLabel);
-                document.paths.Add(string.Format("/{0}", classLabel), getAllObjectsPath);
-                OASDocument.Path getSingleObjectPath = GenerateGetSingleObjectPath(classLabel);
-                document.paths.Add(string.Format("/{0}/{{id}}", classLabel), getSingleObjectPath);
-
-                // Create each of the HTTP methods
-                // TODO: PUT, PATCH, etc
-                // TODO: filtering, parameters, etc
+                // Create paths and corresponding operations for class
+                // TODO: POST
+                document.paths.Add(string.Format("/{0}", classLabel), new OASDocument.Path()
+                {
+                    get = GenerateGetEntitiesOperation(classLabel)
+                });
+                document.paths.Add(string.Format("/{0}/{{id}}", classLabel), new OASDocument.Path()
+                {
+                    get = GenerateGetEntityByIdOperation(classLabel),
+                    put = GeneratePutToIdOperation(classLabel)
+                });
             }
         }
 
-        private static OASDocument.Path GenerateGetSingleObjectPath(string classLabel)
+        private static OASDocument.Operation GenerateGetEntityByIdOperation(string classLabel)
         {
-            // Create path for class
-            OASDocument.Path path = new OASDocument.Path();
-
-            // Create Get
-            path.get = new OASDocument.Operation();
-            path.get.summary = string.Format("Get a specific '{0}' object.", classLabel);
-            path.get.tags.Add(classLabel);
+            OASDocument.Operation getOperation = new OASDocument.Operation();
+            getOperation.summary = string.Format("Get a specific '{0}' object.", classLabel);
+            getOperation.tags.Add(classLabel);
 
             // Add the ID parameter
             OASDocument.Parameter idParameter = new OASDocument.Parameter()
@@ -483,14 +481,12 @@ namespace OWL2OAS
                             { "type", "string" },
                         }
             };
-            path.get.parameters.Add(idParameter);
-
-            path.get.responses = new Dictionary<string, OASDocument.Response>();
+            getOperation.parameters.Add(idParameter);
 
             // Create each of the HTTP response types
             OASDocument.Response response = new OASDocument.Response();
             response.description = string.Format("A '{0}' object.", classLabel);
-            path.get.responses.Add("200", response);
+            getOperation.responses.Add("200", response);
 
             response.content = new Dictionary<string, OASDocument.Content>();
             OASDocument.Content content = new OASDocument.Content();
@@ -499,29 +495,25 @@ namespace OWL2OAS
             // Response is per previously defined schema
             content.schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
 
-            return path;
+            return getOperation;
         }
 
-        private static OASDocument.Path GenerateGetAllObjectsPath(string classLabel)
+        private static OASDocument.Operation GenerateGetEntitiesOperation(string classLabel)
         {
-            // Create path for class
-            OASDocument.Path path = new OASDocument.Path();
 
             // Create Get
-            path.get = new OASDocument.Operation();
-            path.get.summary = "Get '" + classLabel + "' objects.";
-            path.get.tags.Add(classLabel);
+            OASDocument.Operation getOperation = new OASDocument.Operation();
+            getOperation.summary = "Get '" + classLabel + "' entities.";
+            getOperation.tags.Add(classLabel);
 
             // Add pagination parameters
-            path.get.parameters.Add(new OASDocument.Parameter() { ReferenceTo = "offsetParam" });
-            path.get.parameters.Add(new OASDocument.Parameter() { ReferenceTo = "limitParam" });
-
-            path.get.responses = new Dictionary<string, OASDocument.Response>();
+            getOperation.parameters.Add(new OASDocument.Parameter() { ReferenceTo = "offsetParam" });
+            getOperation.parameters.Add(new OASDocument.Parameter() { ReferenceTo = "limitParam" });
 
             // Create each of the HTTP response types
             OASDocument.Response response = new OASDocument.Response();
             response.description = "An array of '" + classLabel + "' objects.";
-            path.get.responses.Add("200", response);
+            getOperation.responses.Add("200", response);
 
             response.content = new Dictionary<string, OASDocument.Content>();
             OASDocument.Content content = new OASDocument.Content();
@@ -534,7 +526,52 @@ namespace OWL2OAS
             };
 
             // Return
-            return path;
+            return getOperation;
+        }
+
+        private static OASDocument.Operation GeneratePutToIdOperation(string classLabel)
+        {
+            OASDocument.Operation putOperation = new OASDocument.Operation();
+            putOperation.summary = string.Format("Update an existing '{0}' entity.", classLabel);
+            putOperation.tags.Add(classLabel);
+
+            // Add the ID parameter
+            OASDocument.Parameter idParameter = new OASDocument.Parameter()
+            {
+                name = "id",
+                description = string.Format("Id of '{0}' to update.", classLabel),
+                InField = OASDocument.Parameter.InFieldValues.path,
+                required = true,
+                schema = new Dictionary<string, string> {
+                            { "type", "string" },
+                        }
+            };
+            OASDocument.Parameter bodyParameter = new OASDocument.Parameter()
+            {
+                name = "entity",
+                description = string.Format("Updated data for '{0}' entity.", classLabel),
+                InField = OASDocument.Parameter.InFieldValues.header,
+                required = true,
+                schema = new Dictionary<string, string> {
+                            { "$ref", "#/components/schemas/" + HttpUtility.HtmlAttributeEncode(classLabel) },
+                        }
+            };
+            putOperation.parameters.Add(idParameter);
+            putOperation.parameters.Add(bodyParameter);
+
+            // Create each of the HTTP response types
+            OASDocument.Response response = new OASDocument.Response();
+            response.description = "Entity was updated successfully (new representation returned).";
+            putOperation.responses.Add("200", response);
+
+            response.content = new Dictionary<string, OASDocument.Content>();
+            OASDocument.Content content = new OASDocument.Content();
+            response.content.Add("application/jsonld", content);
+
+            // Response is per previously defined schema
+            content.schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+
+            return putOperation;
         }
 
         private static void DumpAsYaml(object data)
