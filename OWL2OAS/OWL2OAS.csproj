@@ -12,8 +12,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="rec-core-3.0.rdf">
+    <None Remove="examples\rec-core-v3.0.rdf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="examples\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="examples\rec-core-v3.0.rdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    </Content>
   </ItemGroup>
 </Project>

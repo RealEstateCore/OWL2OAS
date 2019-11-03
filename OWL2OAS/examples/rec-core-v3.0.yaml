@@ -1,0 +1,1822 @@
+﻿openapi: 3.0.0
+info:
+  title: RealEstateCore Core Module
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  description: The documentation below is automatically extracted from a <dc:description> annotation on the ontology https://w3id.org/rec/core/:<br/><br/>*The REC core module collects the top-level classes and properties that span over or are reused within multiple REC modules.<br/><br/>Note that this module reuses certain classes, properties, and named individuals from other vocabularies, e.g., GeoSPARQL; the copyright conditions on those reused entities are stated in their respective rdfs:comments annotations.*
+  version: "3.0"
+components:
+  parameters:
+    offsetParam:
+      name: offset
+      description: Number of items to skip before returning the results.
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        default: 0
+      in: query
+    limitParam:
+      name: limit
+      description: Maximum number of items to return.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        default: 20
+      in: query
+  schemas:
+    Context:
+      type: object
+      required:
+      - '@vocab'
+      - '@base'
+      - label
+      properties:
+        '@vocab':
+          type: string
+          format: uri
+          default: https://w3id.org/rec/core/3.0/
+        '@base':
+          type: string
+          format: uri
+        label:
+          type: string
+          format: uri
+          default: http://www.w3.org/2000/01/rdf-schema#label
+    Geometry:
+      type: object
+      properties:
+        '@context':
+          $ref: '#/components/schemas/Context'
+        '@id':
+          type: string
+        '@type':
+          type: string
+          default: Geometry
+        label:
+          type: string
+        asGML:
+          type: string
+        asWKT:
+          type: string
+        hasSerialization:
+          type: string
+    Building:
+      type: object
+      properties:
+        '@context':
+          $ref: '#/components/schemas/Context'
+        '@id':
+          type: string
+        '@type':
+          type: string
+          default: Building
+        label:
+          type: string
+        hasBuildingComponent:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: BuildingComponent
+          required:
+          - '@id'
+        hasGeoReferenceOrigo:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: GeoReferenceOrigo
+          required:
+          - '@id'
+        isPartOfRealEstate:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: RealEstate
+          required:
+          - '@id'
+    BuildingComponent:
+      type: object
+      required:
+      - isPartOfBuilding
+      properties:
+        '@context':
+          $ref: '#/components/schemas/Context'
+        '@id':
+          type: string
+        '@type':
+          type: string
+          default: BuildingComponent
+        label:
+          type: string
+        containsMountedDevice:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: Device
+          required:
+          - '@id'
+        hasSubBuildingComponent:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: BuildingComponent
+          required:
+          - '@id'
+        hasSuperBuildingComponent:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: BuildingComponent
+          required:
+          - '@id'
+        isPartOfBuilding:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: Building
+          required:
+          - '@id'
+    Device:
+      type: object
+      properties:
+        '@context':
+          $ref: '#/components/schemas/Context'
+        '@id':
+          type: string
+        '@type':
+          type: string
+          default: Device
+        label:
+          type: string
+        associatedWithEvent:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: Event
+          required:
+          - '@id'
+        deviceMeasurementUnit:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: MeasurementUnit
+          required:
+          - '@id'
+        hasSubDevice:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: Device
+          required:
+          - '@id'
+        hasSuperDevice:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: Device
+          required:
+          - '@id'
+        isMountedInBuildingComponent:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: BuildingComponent
+          required:
+          - '@id'
+        servesBuilding:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: Building
+          required:
+          - '@id'
+        servesBuildingComponent:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: BuildingComponent
+          required:
+          - '@id'
+        servesDevice:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: Device
+          required:
+          - '@id'
+        quantityKind:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: QuantityKind
+          required:
+          - '@id'
+    Event:
+      type: object
+      properties:
+        '@context':
+          $ref: '#/components/schemas/Context'
+        '@id':
+          type: string
+        '@type':
+          type: string
+          default: Event
+        label:
+          type: string
+        eventMeasurementUnit:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: MeasurementUnit
+          required:
+          - '@id'
+        hasCreatedTime:
+          type: string
+          format: date-time
+        hasDeletedTime:
+          type: string
+          format: date-time
+        hasDuration:
+          type: number
+          format: double
+        hasObservationTime:
+          type: string
+          format: date-time
+        hasPointInTime:
+          type: string
+          format: date-time
+        hasReadTime:
+          type: string
+          format: date-time
+        hasStartTime:
+          type: string
+          format: date-time
+        hasStopTime:
+          type: string
+          format: date-time
+        hasUpdatedTime:
+          type: string
+          format: date-time
+    GeoReferenceOrigo:
+      type: object
+      properties:
+        '@context':
+          $ref: '#/components/schemas/Context'
+        '@id':
+          type: string
+        '@type':
+          type: string
+          default: GeoReferenceOrigo
+        label:
+          type: string
+        hasGeoReferenceBearing:
+          type: number
+          format: double
+        asGML:
+          type: string
+        asWKT:
+          type: string
+        hasSerialization:
+          type: string
+    Land:
+      type: object
+      properties:
+        '@context':
+          $ref: '#/components/schemas/Context'
+        '@id':
+          type: string
+        '@type':
+          type: string
+          default: Land
+        label:
+          type: string
+        isPartOfRealEstate:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: RealEstate
+          required:
+          - '@id'
+    MeasurementUnit:
+      type: object
+      properties:
+        '@context':
+          $ref: '#/components/schemas/Context'
+        '@id':
+          type: string
+        '@type':
+          type: string
+          default: MeasurementUnit
+        label:
+          type: string
+    QuantityKind:
+      type: object
+      properties:
+        '@context':
+          $ref: '#/components/schemas/Context'
+        '@id':
+          type: string
+        '@type':
+          type: string
+          default: QuantityKind
+        label:
+          type: string
+        qkMeasurementUnit:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: MeasurementUnit
+          required:
+          - '@id'
+    RealEstate:
+      type: object
+      properties:
+        '@context':
+          $ref: '#/components/schemas/Context'
+        '@id':
+          type: string
+        '@type':
+          type: string
+          default: RealEstate
+        label:
+          type: string
+        hasRealEstateComponent:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: RealEstateComponent
+          required:
+          - '@id'
+    RealEstateComponent:
+      type: object
+      properties:
+        '@context':
+          $ref: '#/components/schemas/Context'
+        '@id':
+          type: string
+        '@type':
+          type: string
+          default: RealEstateComponent
+        label:
+          type: string
+        isPartOfRealEstate:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: RealEstate
+          required:
+          - '@id'
+    Room:
+      type: object
+      required:
+      - isPartOfBuilding
+      properties:
+        '@context':
+          $ref: '#/components/schemas/Context'
+        '@id':
+          type: string
+        '@type':
+          type: string
+          default: Room
+        label:
+          type: string
+        containsMountedDevice:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: Device
+          required:
+          - '@id'
+        hasSubBuildingComponent:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: BuildingComponent
+          required:
+          - '@id'
+        hasSuperBuildingComponent:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: BuildingComponent
+          required:
+          - '@id'
+        isPartOfBuilding:
+          type: object
+          properties:
+            '@id':
+              type: string
+            '@type':
+              type: string
+              default: Building
+          required:
+          - '@id'
+paths:
+  /JsonLdContext:
+    get:
+      summary: Get the JSON-LD @context for this API, i.e., the set of ontologies that were used to generate the API.
+      parameters: []
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Context'
+          description: A JSON-LD @context declaration.
+      tags: []
+  /Geometry:
+    get:
+      summary: Get 'Geometry' entities.
+      parameters:
+      - $ref: '#/components/parameters/offsetParam'
+      - $ref: '#/components/parameters/limitParam'
+      - name: asGML
+        description: Filter value on property 'asGML'.
+        schema:
+          type: string
+        in: query
+      - name: asWKT
+        description: Filter value on property 'asWKT'.
+        schema:
+          type: string
+        in: query
+      - name: hasSerialization
+        description: Filter value on property 'hasSerialization'.
+        schema:
+          type: string
+        in: query
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Geometry'
+          description: An array of 'Geometry' objects.
+      tags:
+      - Geometry
+    post:
+      summary: Create a new 'Geometry' object.
+      parameters:
+      - name: entity
+        description: New 'Geometry' entity that is to be added.
+        required: true
+        schema:
+          $ref: '#/components/schemas/Geometry'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Geometry'
+          description: Entity was successfully created (new representation returned).
+      tags:
+      - Geometry
+  /Geometry/{id}:
+    get:
+      summary: Get a specific 'Geometry' object.
+      parameters:
+      - name: id
+        description: Id of 'Geometry' to return.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Geometry'
+          description: A 'Geometry' object.
+      tags:
+      - Geometry
+    put:
+      summary: Update an existing 'Geometry' entity.
+      parameters:
+      - name: id
+        description: Id of 'Geometry' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: entity
+        description: Updated data for 'Geometry' entity.
+        required: true
+        schema:
+          $ref: '#/components/schemas/Geometry'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Geometry'
+          description: Entity was updated successfully (new representation returned).
+      tags:
+      - Geometry
+    delete:
+      summary: Delete a 'Geometry' object.
+      parameters:
+      - name: id
+        description: Id of 'Geometry' to delete.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        default:
+          description: "'Geometry' entity was successfully deleted."
+      tags:
+      - Geometry
+  /Building:
+    get:
+      summary: Get 'Building' entities.
+      parameters:
+      - $ref: '#/components/parameters/offsetParam'
+      - $ref: '#/components/parameters/limitParam'
+      - name: hasBuildingComponent
+        description: Filter value on property 'hasBuildingComponent'.
+        schema:
+          type: string
+        in: query
+      - name: hasGeoReferenceOrigo
+        description: Filter value on property 'hasGeoReferenceOrigo'.
+        schema:
+          type: string
+        in: query
+      - name: isPartOfRealEstate
+        description: Filter value on property 'isPartOfRealEstate'.
+        schema:
+          type: string
+        in: query
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Building'
+          description: An array of 'Building' objects.
+      tags:
+      - Building
+    post:
+      summary: Create a new 'Building' object.
+      parameters:
+      - name: entity
+        description: New 'Building' entity that is to be added.
+        required: true
+        schema:
+          $ref: '#/components/schemas/Building'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Building'
+          description: Entity was successfully created (new representation returned).
+      tags:
+      - Building
+  /Building/{id}:
+    get:
+      summary: Get a specific 'Building' object.
+      parameters:
+      - name: id
+        description: Id of 'Building' to return.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Building'
+          description: A 'Building' object.
+      tags:
+      - Building
+    put:
+      summary: Update an existing 'Building' entity.
+      parameters:
+      - name: id
+        description: Id of 'Building' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: entity
+        description: Updated data for 'Building' entity.
+        required: true
+        schema:
+          $ref: '#/components/schemas/Building'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Building'
+          description: Entity was updated successfully (new representation returned).
+      tags:
+      - Building
+    delete:
+      summary: Delete a 'Building' object.
+      parameters:
+      - name: id
+        description: Id of 'Building' to delete.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        default:
+          description: "'Building' entity was successfully deleted."
+      tags:
+      - Building
+  /BuildingComponent:
+    get:
+      summary: Get 'BuildingComponent' entities.
+      parameters:
+      - $ref: '#/components/parameters/offsetParam'
+      - $ref: '#/components/parameters/limitParam'
+      - name: containsMountedDevice
+        description: Filter value on property 'containsMountedDevice'.
+        schema:
+          type: string
+        in: query
+      - name: hasSubBuildingComponent
+        description: Filter value on property 'hasSubBuildingComponent'.
+        schema:
+          type: string
+        in: query
+      - name: hasSuperBuildingComponent
+        description: Filter value on property 'hasSuperBuildingComponent'.
+        schema:
+          type: string
+        in: query
+      - name: isPartOfBuilding
+        description: Filter value on property 'isPartOfBuilding'.
+        schema:
+          type: string
+        in: query
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BuildingComponent'
+          description: An array of 'BuildingComponent' objects.
+      tags:
+      - BuildingComponent
+    post:
+      summary: Create a new 'BuildingComponent' object.
+      parameters:
+      - name: entity
+        description: New 'BuildingComponent' entity that is to be added.
+        required: true
+        schema:
+          $ref: '#/components/schemas/BuildingComponent'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/BuildingComponent'
+          description: Entity was successfully created (new representation returned).
+      tags:
+      - BuildingComponent
+  /BuildingComponent/{id}:
+    get:
+      summary: Get a specific 'BuildingComponent' object.
+      parameters:
+      - name: id
+        description: Id of 'BuildingComponent' to return.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/BuildingComponent'
+          description: A 'BuildingComponent' object.
+      tags:
+      - BuildingComponent
+    put:
+      summary: Update an existing 'BuildingComponent' entity.
+      parameters:
+      - name: id
+        description: Id of 'BuildingComponent' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: entity
+        description: Updated data for 'BuildingComponent' entity.
+        required: true
+        schema:
+          $ref: '#/components/schemas/BuildingComponent'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/BuildingComponent'
+          description: Entity was updated successfully (new representation returned).
+      tags:
+      - BuildingComponent
+    delete:
+      summary: Delete a 'BuildingComponent' object.
+      parameters:
+      - name: id
+        description: Id of 'BuildingComponent' to delete.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        default:
+          description: "'BuildingComponent' entity was successfully deleted."
+      tags:
+      - BuildingComponent
+  /Device:
+    get:
+      summary: Get 'Device' entities.
+      parameters:
+      - $ref: '#/components/parameters/offsetParam'
+      - $ref: '#/components/parameters/limitParam'
+      - name: associatedWithEvent
+        description: Filter value on property 'associatedWithEvent'.
+        schema:
+          type: string
+        in: query
+      - name: deviceMeasurementUnit
+        description: Filter value on property 'deviceMeasurementUnit'.
+        schema:
+          type: string
+        in: query
+      - name: hasSubDevice
+        description: Filter value on property 'hasSubDevice'.
+        schema:
+          type: string
+        in: query
+      - name: hasSuperDevice
+        description: Filter value on property 'hasSuperDevice'.
+        schema:
+          type: string
+        in: query
+      - name: isMountedInBuildingComponent
+        description: Filter value on property 'isMountedInBuildingComponent'.
+        schema:
+          type: string
+        in: query
+      - name: servesBuilding
+        description: Filter value on property 'servesBuilding'.
+        schema:
+          type: string
+        in: query
+      - name: servesBuildingComponent
+        description: Filter value on property 'servesBuildingComponent'.
+        schema:
+          type: string
+        in: query
+      - name: servesDevice
+        description: Filter value on property 'servesDevice'.
+        schema:
+          type: string
+        in: query
+      - name: quantityKind
+        description: Filter value on property 'quantityKind'.
+        schema:
+          type: string
+        in: query
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+          description: An array of 'Device' objects.
+      tags:
+      - Device
+    post:
+      summary: Create a new 'Device' object.
+      parameters:
+      - name: entity
+        description: New 'Device' entity that is to be added.
+        required: true
+        schema:
+          $ref: '#/components/schemas/Device'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Device'
+          description: Entity was successfully created (new representation returned).
+      tags:
+      - Device
+  /Device/{id}:
+    get:
+      summary: Get a specific 'Device' object.
+      parameters:
+      - name: id
+        description: Id of 'Device' to return.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Device'
+          description: A 'Device' object.
+      tags:
+      - Device
+    put:
+      summary: Update an existing 'Device' entity.
+      parameters:
+      - name: id
+        description: Id of 'Device' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: entity
+        description: Updated data for 'Device' entity.
+        required: true
+        schema:
+          $ref: '#/components/schemas/Device'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Device'
+          description: Entity was updated successfully (new representation returned).
+      tags:
+      - Device
+    delete:
+      summary: Delete a 'Device' object.
+      parameters:
+      - name: id
+        description: Id of 'Device' to delete.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        default:
+          description: "'Device' entity was successfully deleted."
+      tags:
+      - Device
+  /Event:
+    get:
+      summary: Get 'Event' entities.
+      parameters:
+      - $ref: '#/components/parameters/offsetParam'
+      - $ref: '#/components/parameters/limitParam'
+      - name: eventMeasurementUnit
+        description: Filter value on property 'eventMeasurementUnit'.
+        schema:
+          type: string
+        in: query
+      - name: hasCreatedTime
+        description: Filter value on property 'hasCreatedTime'.
+        schema:
+          type: string
+          format: date-time
+        in: query
+      - name: hasDeletedTime
+        description: Filter value on property 'hasDeletedTime'.
+        schema:
+          type: string
+          format: date-time
+        in: query
+      - name: hasDuration
+        description: Filter value on property 'hasDuration'.
+        schema:
+          type: number
+          format: double
+        in: query
+      - name: hasObservationTime
+        description: Filter value on property 'hasObservationTime'.
+        schema:
+          type: string
+          format: date-time
+        in: query
+      - name: hasPointInTime
+        description: Filter value on property 'hasPointInTime'.
+        schema:
+          type: string
+          format: date-time
+        in: query
+      - name: hasReadTime
+        description: Filter value on property 'hasReadTime'.
+        schema:
+          type: string
+          format: date-time
+        in: query
+      - name: hasStartTime
+        description: Filter value on property 'hasStartTime'.
+        schema:
+          type: string
+          format: date-time
+        in: query
+      - name: hasStopTime
+        description: Filter value on property 'hasStopTime'.
+        schema:
+          type: string
+          format: date-time
+        in: query
+      - name: hasUpdatedTime
+        description: Filter value on property 'hasUpdatedTime'.
+        schema:
+          type: string
+          format: date-time
+        in: query
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+          description: An array of 'Event' objects.
+      tags:
+      - Event
+    post:
+      summary: Create a new 'Event' object.
+      parameters:
+      - name: entity
+        description: New 'Event' entity that is to be added.
+        required: true
+        schema:
+          $ref: '#/components/schemas/Event'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Event'
+          description: Entity was successfully created (new representation returned).
+      tags:
+      - Event
+  /Event/{id}:
+    get:
+      summary: Get a specific 'Event' object.
+      parameters:
+      - name: id
+        description: Id of 'Event' to return.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Event'
+          description: A 'Event' object.
+      tags:
+      - Event
+    put:
+      summary: Update an existing 'Event' entity.
+      parameters:
+      - name: id
+        description: Id of 'Event' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: entity
+        description: Updated data for 'Event' entity.
+        required: true
+        schema:
+          $ref: '#/components/schemas/Event'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Event'
+          description: Entity was updated successfully (new representation returned).
+      tags:
+      - Event
+    delete:
+      summary: Delete a 'Event' object.
+      parameters:
+      - name: id
+        description: Id of 'Event' to delete.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        default:
+          description: "'Event' entity was successfully deleted."
+      tags:
+      - Event
+  /GeoReferenceOrigo:
+    get:
+      summary: Get 'GeoReferenceOrigo' entities.
+      parameters:
+      - $ref: '#/components/parameters/offsetParam'
+      - $ref: '#/components/parameters/limitParam'
+      - name: hasGeoReferenceBearing
+        description: Filter value on property 'hasGeoReferenceBearing'.
+        schema:
+          type: number
+          format: double
+        in: query
+      - name: asGML
+        description: Filter value on property 'asGML'.
+        schema:
+          type: string
+        in: query
+      - name: asWKT
+        description: Filter value on property 'asWKT'.
+        schema:
+          type: string
+        in: query
+      - name: hasSerialization
+        description: Filter value on property 'hasSerialization'.
+        schema:
+          type: string
+        in: query
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeoReferenceOrigo'
+          description: An array of 'GeoReferenceOrigo' objects.
+      tags:
+      - GeoReferenceOrigo
+    post:
+      summary: Create a new 'GeoReferenceOrigo' object.
+      parameters:
+      - name: entity
+        description: New 'GeoReferenceOrigo' entity that is to be added.
+        required: true
+        schema:
+          $ref: '#/components/schemas/GeoReferenceOrigo'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/GeoReferenceOrigo'
+          description: Entity was successfully created (new representation returned).
+      tags:
+      - GeoReferenceOrigo
+  /GeoReferenceOrigo/{id}:
+    get:
+      summary: Get a specific 'GeoReferenceOrigo' object.
+      parameters:
+      - name: id
+        description: Id of 'GeoReferenceOrigo' to return.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/GeoReferenceOrigo'
+          description: A 'GeoReferenceOrigo' object.
+      tags:
+      - GeoReferenceOrigo
+    put:
+      summary: Update an existing 'GeoReferenceOrigo' entity.
+      parameters:
+      - name: id
+        description: Id of 'GeoReferenceOrigo' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: entity
+        description: Updated data for 'GeoReferenceOrigo' entity.
+        required: true
+        schema:
+          $ref: '#/components/schemas/GeoReferenceOrigo'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/GeoReferenceOrigo'
+          description: Entity was updated successfully (new representation returned).
+      tags:
+      - GeoReferenceOrigo
+    delete:
+      summary: Delete a 'GeoReferenceOrigo' object.
+      parameters:
+      - name: id
+        description: Id of 'GeoReferenceOrigo' to delete.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        default:
+          description: "'GeoReferenceOrigo' entity was successfully deleted."
+      tags:
+      - GeoReferenceOrigo
+  /Land:
+    get:
+      summary: Get 'Land' entities.
+      parameters:
+      - $ref: '#/components/parameters/offsetParam'
+      - $ref: '#/components/parameters/limitParam'
+      - name: isPartOfRealEstate
+        description: Filter value on property 'isPartOfRealEstate'.
+        schema:
+          type: string
+        in: query
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Land'
+          description: An array of 'Land' objects.
+      tags:
+      - Land
+    post:
+      summary: Create a new 'Land' object.
+      parameters:
+      - name: entity
+        description: New 'Land' entity that is to be added.
+        required: true
+        schema:
+          $ref: '#/components/schemas/Land'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Land'
+          description: Entity was successfully created (new representation returned).
+      tags:
+      - Land
+  /Land/{id}:
+    get:
+      summary: Get a specific 'Land' object.
+      parameters:
+      - name: id
+        description: Id of 'Land' to return.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Land'
+          description: A 'Land' object.
+      tags:
+      - Land
+    put:
+      summary: Update an existing 'Land' entity.
+      parameters:
+      - name: id
+        description: Id of 'Land' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: entity
+        description: Updated data for 'Land' entity.
+        required: true
+        schema:
+          $ref: '#/components/schemas/Land'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Land'
+          description: Entity was updated successfully (new representation returned).
+      tags:
+      - Land
+    delete:
+      summary: Delete a 'Land' object.
+      parameters:
+      - name: id
+        description: Id of 'Land' to delete.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        default:
+          description: "'Land' entity was successfully deleted."
+      tags:
+      - Land
+  /MeasurementUnit:
+    get:
+      summary: Get 'MeasurementUnit' entities.
+      parameters:
+      - $ref: '#/components/parameters/offsetParam'
+      - $ref: '#/components/parameters/limitParam'
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MeasurementUnit'
+          description: An array of 'MeasurementUnit' objects.
+      tags:
+      - MeasurementUnit
+    post:
+      summary: Create a new 'MeasurementUnit' object.
+      parameters:
+      - name: entity
+        description: New 'MeasurementUnit' entity that is to be added.
+        required: true
+        schema:
+          $ref: '#/components/schemas/MeasurementUnit'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/MeasurementUnit'
+          description: Entity was successfully created (new representation returned).
+      tags:
+      - MeasurementUnit
+  /MeasurementUnit/{id}:
+    get:
+      summary: Get a specific 'MeasurementUnit' object.
+      parameters:
+      - name: id
+        description: Id of 'MeasurementUnit' to return.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/MeasurementUnit'
+          description: A 'MeasurementUnit' object.
+      tags:
+      - MeasurementUnit
+    put:
+      summary: Update an existing 'MeasurementUnit' entity.
+      parameters:
+      - name: id
+        description: Id of 'MeasurementUnit' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: entity
+        description: Updated data for 'MeasurementUnit' entity.
+        required: true
+        schema:
+          $ref: '#/components/schemas/MeasurementUnit'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/MeasurementUnit'
+          description: Entity was updated successfully (new representation returned).
+      tags:
+      - MeasurementUnit
+    delete:
+      summary: Delete a 'MeasurementUnit' object.
+      parameters:
+      - name: id
+        description: Id of 'MeasurementUnit' to delete.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        default:
+          description: "'MeasurementUnit' entity was successfully deleted."
+      tags:
+      - MeasurementUnit
+  /QuantityKind:
+    get:
+      summary: Get 'QuantityKind' entities.
+      parameters:
+      - $ref: '#/components/parameters/offsetParam'
+      - $ref: '#/components/parameters/limitParam'
+      - name: qkMeasurementUnit
+        description: Filter value on property 'qkMeasurementUnit'.
+        schema:
+          type: string
+        in: query
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuantityKind'
+          description: An array of 'QuantityKind' objects.
+      tags:
+      - QuantityKind
+    post:
+      summary: Create a new 'QuantityKind' object.
+      parameters:
+      - name: entity
+        description: New 'QuantityKind' entity that is to be added.
+        required: true
+        schema:
+          $ref: '#/components/schemas/QuantityKind'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/QuantityKind'
+          description: Entity was successfully created (new representation returned).
+      tags:
+      - QuantityKind
+  /QuantityKind/{id}:
+    get:
+      summary: Get a specific 'QuantityKind' object.
+      parameters:
+      - name: id
+        description: Id of 'QuantityKind' to return.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/QuantityKind'
+          description: A 'QuantityKind' object.
+      tags:
+      - QuantityKind
+    put:
+      summary: Update an existing 'QuantityKind' entity.
+      parameters:
+      - name: id
+        description: Id of 'QuantityKind' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: entity
+        description: Updated data for 'QuantityKind' entity.
+        required: true
+        schema:
+          $ref: '#/components/schemas/QuantityKind'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/QuantityKind'
+          description: Entity was updated successfully (new representation returned).
+      tags:
+      - QuantityKind
+    delete:
+      summary: Delete a 'QuantityKind' object.
+      parameters:
+      - name: id
+        description: Id of 'QuantityKind' to delete.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        default:
+          description: "'QuantityKind' entity was successfully deleted."
+      tags:
+      - QuantityKind
+  /RealEstate:
+    get:
+      summary: Get 'RealEstate' entities.
+      parameters:
+      - $ref: '#/components/parameters/offsetParam'
+      - $ref: '#/components/parameters/limitParam'
+      - name: hasRealEstateComponent
+        description: Filter value on property 'hasRealEstateComponent'.
+        schema:
+          type: string
+        in: query
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RealEstate'
+          description: An array of 'RealEstate' objects.
+      tags:
+      - RealEstate
+    post:
+      summary: Create a new 'RealEstate' object.
+      parameters:
+      - name: entity
+        description: New 'RealEstate' entity that is to be added.
+        required: true
+        schema:
+          $ref: '#/components/schemas/RealEstate'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/RealEstate'
+          description: Entity was successfully created (new representation returned).
+      tags:
+      - RealEstate
+  /RealEstate/{id}:
+    get:
+      summary: Get a specific 'RealEstate' object.
+      parameters:
+      - name: id
+        description: Id of 'RealEstate' to return.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/RealEstate'
+          description: A 'RealEstate' object.
+      tags:
+      - RealEstate
+    put:
+      summary: Update an existing 'RealEstate' entity.
+      parameters:
+      - name: id
+        description: Id of 'RealEstate' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: entity
+        description: Updated data for 'RealEstate' entity.
+        required: true
+        schema:
+          $ref: '#/components/schemas/RealEstate'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/RealEstate'
+          description: Entity was updated successfully (new representation returned).
+      tags:
+      - RealEstate
+    delete:
+      summary: Delete a 'RealEstate' object.
+      parameters:
+      - name: id
+        description: Id of 'RealEstate' to delete.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        default:
+          description: "'RealEstate' entity was successfully deleted."
+      tags:
+      - RealEstate
+  /RealEstateComponent:
+    get:
+      summary: Get 'RealEstateComponent' entities.
+      parameters:
+      - $ref: '#/components/parameters/offsetParam'
+      - $ref: '#/components/parameters/limitParam'
+      - name: isPartOfRealEstate
+        description: Filter value on property 'isPartOfRealEstate'.
+        schema:
+          type: string
+        in: query
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RealEstateComponent'
+          description: An array of 'RealEstateComponent' objects.
+      tags:
+      - RealEstateComponent
+    post:
+      summary: Create a new 'RealEstateComponent' object.
+      parameters:
+      - name: entity
+        description: New 'RealEstateComponent' entity that is to be added.
+        required: true
+        schema:
+          $ref: '#/components/schemas/RealEstateComponent'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/RealEstateComponent'
+          description: Entity was successfully created (new representation returned).
+      tags:
+      - RealEstateComponent
+  /RealEstateComponent/{id}:
+    get:
+      summary: Get a specific 'RealEstateComponent' object.
+      parameters:
+      - name: id
+        description: Id of 'RealEstateComponent' to return.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/RealEstateComponent'
+          description: A 'RealEstateComponent' object.
+      tags:
+      - RealEstateComponent
+    put:
+      summary: Update an existing 'RealEstateComponent' entity.
+      parameters:
+      - name: id
+        description: Id of 'RealEstateComponent' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: entity
+        description: Updated data for 'RealEstateComponent' entity.
+        required: true
+        schema:
+          $ref: '#/components/schemas/RealEstateComponent'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/RealEstateComponent'
+          description: Entity was updated successfully (new representation returned).
+      tags:
+      - RealEstateComponent
+    delete:
+      summary: Delete a 'RealEstateComponent' object.
+      parameters:
+      - name: id
+        description: Id of 'RealEstateComponent' to delete.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        default:
+          description: "'RealEstateComponent' entity was successfully deleted."
+      tags:
+      - RealEstateComponent
+  /Room:
+    get:
+      summary: Get 'Room' entities.
+      parameters:
+      - $ref: '#/components/parameters/offsetParam'
+      - $ref: '#/components/parameters/limitParam'
+      - name: containsMountedDevice
+        description: Filter value on property 'containsMountedDevice'.
+        schema:
+          type: string
+        in: query
+      - name: hasSubBuildingComponent
+        description: Filter value on property 'hasSubBuildingComponent'.
+        schema:
+          type: string
+        in: query
+      - name: hasSuperBuildingComponent
+        description: Filter value on property 'hasSuperBuildingComponent'.
+        schema:
+          type: string
+        in: query
+      - name: isPartOfBuilding
+        description: Filter value on property 'isPartOfBuilding'.
+        schema:
+          type: string
+        in: query
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
+          description: An array of 'Room' objects.
+      tags:
+      - Room
+    post:
+      summary: Create a new 'Room' object.
+      parameters:
+      - name: entity
+        description: New 'Room' entity that is to be added.
+        required: true
+        schema:
+          $ref: '#/components/schemas/Room'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Room'
+          description: Entity was successfully created (new representation returned).
+      tags:
+      - Room
+  /Room/{id}:
+    get:
+      summary: Get a specific 'Room' object.
+      parameters:
+      - name: id
+        description: Id of 'Room' to return.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Room'
+          description: A 'Room' object.
+      tags:
+      - Room
+    put:
+      summary: Update an existing 'Room' entity.
+      parameters:
+      - name: id
+        description: Id of 'Room' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: entity
+        description: Updated data for 'Room' entity.
+        required: true
+        schema:
+          $ref: '#/components/schemas/Room'
+        in: header
+      responses:
+        200:
+          content:
+            application/jsonld:
+              schema:
+                $ref: '#/components/schemas/Room'
+          description: Entity was updated successfully (new representation returned).
+      tags:
+      - Room
+    delete:
+      summary: Delete a 'Room' object.
+      parameters:
+      - name: id
+        description: Id of 'Room' to delete.
+        required: true
+        schema:
+          type: string
+        in: path
+      responses:
+        default:
+          description: "'Room' entity was successfully deleted."
+      tags:
+      - Room
+servers:
+- url: http://localhost:8080/
