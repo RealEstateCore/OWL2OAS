@@ -43,6 +43,15 @@ namespace OWL2OAS
             return node.NodeType.Equals(NodeType.Uri);
         }
 
+        public static IUriNode AsUriNode(this INode node)
+        {
+            if (!node.IsUri())
+            {
+                throw new RdfException(string.Format("Node {0} is not an URI node.", node));
+            }
+            return node as IUriNode;
+        }
+
         public static bool IsEnglish(this ILiteralNode node)
         {
             return node.Language.Equals("en") || node.Language.StartsWith("en-", StringComparison.Ordinal);
@@ -169,24 +178,23 @@ namespace OWL2OAS
             return ontResource.Resource.IsUri();
         }
 
-        public static Uri GetIri(this OntologyResource resource)
+        public static IUriNode GetUriNode(this OntologyResource ontResource)
         {
-            if (!resource.IsNamed())
+            if (!ontResource.IsNamed())
             {
-                throw new RdfException(string.Format("Ontology resource {0} does not have an IRI.", resource));
+                throw new RdfException(string.Format("Ontology resource {0} does not have an IRI.", ontResource));
             }
-
-            return ((UriNode)resource.Resource).Uri;
+            return ontResource.Resource.AsUriNode();
         }
 
-        // TODO this method and the one above seem to overlap; simplify if possible
-        public static string GetLocalName(this OntologyResource resource)
+        public static Uri GetIri(this OntologyResource ontResource)
         {
-            if (resource.IsNamed())
-            {
-                return ((UriNode)resource.Resource).GetLocalName();
-            }
-            throw new RdfException(string.Format("{0} is not backed by a named URI node.", resource));
+            return ontResource.GetUriNode().Uri;
+        }
+
+        public static string GetLocalName(this OntologyResource ontResource)
+        {
+            return ontResource.GetUriNode().GetLocalName();
         }
 
         public static IEnumerable<INode> GetNodesViaProperty(this OntologyResource resource, INode property)
@@ -202,7 +210,6 @@ namespace OWL2OAS
 
         public static OntologyGraph OntologyGraph(this OntologyResource resource)
         {
-            // TODO: Check if this is potentially explosive design
             return resource.Graph as OntologyGraph;
         }
         #endregion
