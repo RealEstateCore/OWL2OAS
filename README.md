@@ -45,4 +45,4 @@ To translate a remote file, use the `-u` option, as follows:
 
 ## Examples
 
-See the [examples directory](tree/master/OWL2OAS/examples).
+See the [examples directory](https://github.com/hammar/OWL2OAS/tree/master/OWL2OAS/examples).
