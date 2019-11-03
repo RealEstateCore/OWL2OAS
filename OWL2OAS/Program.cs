@@ -57,7 +57,7 @@ namespace OWL2OAS
             {"int",("integer","int32") },
             {"integer",("integer","int32") },
             {"long",("integer","int64") },
-            {"string",("string","") },
+            {"string",("string","") }
         };
 
         /// <summary>
@@ -150,7 +150,7 @@ namespace OWL2OAS
                 throw new RdfException(string.Format("Ontology <{0}> does not have an <owl:versionInfo> annotation.", rootOntology));
             }
             IUriNode ccLicense = rootOntologyGraph.CreateUriNode(VocabularyHelper.CC.license);
-            if (!rootOntology.GetNodesViaProperty(ccLicense).Where(objNode => objNode.IsLiteral() || objNode.IsUri()).Any())
+            if (!rootOntology.GetNodesViaProperty(ccLicense).Any(objNode => objNode.IsLiteral() || objNode.IsUri()))
             {
                 throw new RdfException(string.Format("Ontology <{0}> does not have an <cc:license> annotation that is a URI or literal.", rootOntology));
             }
@@ -184,24 +184,24 @@ namespace OWL2OAS
             Dictionary<string, OASDocument.Schema> schemas = new Dictionary<string, OASDocument.Schema>();
 
             // Set context based on the ontology IRI
-            OASDocument.Property vocabularyProperty = new OASDocument.Property()
+            OASDocument.Property vocabularyProperty = new OASDocument.Property
             {
                 type = "string",
                 format = "uri",
                 DefaultValue = rootOntology.GetVersionOrOntologyIri().ToString()
             };
-            OASDocument.Property baseNamespaceProperty = new OASDocument.Property()
+            OASDocument.Property baseNamespaceProperty = new OASDocument.Property
             {
                 type = "string",
                 format = "uri"
             };
-            OASDocument.Property labelContextProperty = new OASDocument.Property()
+            OASDocument.Property labelContextProperty = new OASDocument.Property
             {
                 type = "string",
                 format = "uri",
                 DefaultValue = VocabularyHelper.RDFS.label.ToString()
             };
-            OASDocument.Schema contextSchema = new OASDocument.Schema()
+            OASDocument.Schema contextSchema = new OASDocument.Schema
             {
                 required = new List<string> { "@vocab", "@base", "label" },
                 properties = new Dictionary<string, OASDocument.Property> {
@@ -213,7 +213,7 @@ namespace OWL2OAS
             // Add each imported ontology to the context
             foreach (Ontology importedOntology in importedOntologies)
             {
-                OASDocument.Property importedVocabularyProperty = new OASDocument.Property()
+                OASDocument.Property importedVocabularyProperty = new OASDocument.Property
                 {
                     type = "string",
                     format = "uri",
@@ -243,12 +243,9 @@ namespace OWL2OAS
             {
                 return cls.GetLocalName();
             }
-            else
-            {
-                string prefix = importedOntologies.First(ontology => ontology.Graph.Equals(graph)).GetShortName();
-                string localName = cls.GetLocalName();
-                return string.Format("{0}:{1}", prefix, localName);
-            }
+            string prefix = importedOntologies.First(ontology => ontology.Graph.Equals(graph)).GetShortName();
+            string localName = cls.GetLocalName();
+            return string.Format("{0}:{1}", prefix, localName);
         }
 
         private static void GenerateClassSchemas(OntologyGraph graph, OASDocument document)
@@ -315,11 +312,9 @@ namespace OWL2OAS
                         OASDocument.Property outputProperty;
 
                         // Check if multiple values are allowed for this property. By default they are.
-                        bool propertyAllowsMultipleValues = true;
-                        if ((constraints.ContainsKey(propertyNode) && constraints[propertyNode].MaxOne()) || property.IsFunctional())
-                        {
-                            propertyAllowsMultipleValues = false;
-                        }
+                        bool propertyAllowsMultipleValues = true
+                            && (!constraints.ContainsKey(propertyNode) || !constraints[propertyNode].MaxOne())
+                            && !property.IsFunctional();
 
                         // If this is a data property
                         if (property.IsDataProperty())
@@ -355,22 +350,22 @@ namespace OWL2OAS
                             OntologyClass range = property.Ranges.First();
                             if (range.IsNamed() && graph.OwlClasses.Contains(range))
                             {
-                                OASDocument.Property nestedIdProperty = new OASDocument.Property()
+                                OASDocument.Property nestedIdProperty = new OASDocument.Property
                                 {
                                     type = "string"
                                 };
-                                OASDocument.Property nestedTypeProperty = new OASDocument.Property()
+                                OASDocument.Property nestedTypeProperty = new OASDocument.Property
                                 {
                                     type = "string",
                                     DefaultValue = range.GetLocalName()
                                 };
-                                uriProperty = new OASDocument.ObjectProperty()
+                                uriProperty = new OASDocument.ObjectProperty
                                 {
-                                    properties = new Dictionary<string, OASDocument.Property>() {
+                                    properties = new Dictionary<string, OASDocument.Property> {
                                         { "@id", nestedIdProperty },
                                         { "@type", nestedTypeProperty }
                                     },
-                                    required = new List<string>() { "@id" }
+                                    required = new List<string> { "@id" }
                                 };
                             }
                             else
@@ -429,12 +424,12 @@ namespace OWL2OAS
                 string classLabel = GetKeyNameForResource(graph, oClass);
 
                 // Create paths and corresponding operations for class
-                document.paths.Add(string.Format("/{0}", classLabel), new OASDocument.Path()
+                document.paths.Add(string.Format("/{0}", classLabel), new OASDocument.Path
                 {
                     get = GenerateGetEntitiesOperation(classLabel, oClass),
                     post = GeneratePostEntityOperation(classLabel)
                 });
-                document.paths.Add(string.Format("/{0}/{{id}}", classLabel), new OASDocument.Path()
+                document.paths.Add(string.Format("/{0}/{{id}}", classLabel), new OASDocument.Path
                 {
                     get = GenerateGetEntityByIdOperation(classLabel),
                     put = GeneratePutToIdOperation(classLabel),
@@ -450,14 +445,14 @@ namespace OWL2OAS
             deleteOperation.tags.Add(classLabel);
 
             // Add the ID parameter
-            OASDocument.Parameter idParameter = new OASDocument.Parameter()
+            OASDocument.Parameter idParameter = new OASDocument.Parameter
             {
                 name = "id",
                 description = string.Format("Id of '{0}' to delete.", classLabel),
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
                 schema = new Dictionary<string, string> {
-                            { "type", "string" },
+                            { "type", "string" }
                         }
             };
             deleteOperation.parameters.Add(idParameter);
@@ -476,14 +471,14 @@ namespace OWL2OAS
             postOperation.summary = string.Format("Create a new '{0}' object.", classLabel);
             postOperation.tags.Add(classLabel);
 
-            OASDocument.Parameter bodyParameter = new OASDocument.Parameter()
+            OASDocument.Parameter bodyParameter = new OASDocument.Parameter
             {
                 name = "entity",
                 description = string.Format("New '{0}' entity that is to be added.", classLabel),
                 InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
                 schema = new Dictionary<string, string> {
-                            { "$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel) },
+                            { "$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel) }
                         }
             };
             postOperation.parameters.Add(bodyParameter);
@@ -510,14 +505,14 @@ namespace OWL2OAS
             getOperation.tags.Add(classLabel);
 
             // Add the ID parameter
-            OASDocument.Parameter idParameter = new OASDocument.Parameter()
+            OASDocument.Parameter idParameter = new OASDocument.Parameter
             {
                 name = "id",
                 description = string.Format("Id of '{0}' to return.", classLabel),
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
                 schema = new Dictionary<string, string> {
-                            { "type", "string" },
+                            { "type", "string" }
                         }
             };
             getOperation.parameters.Add(idParameter);
@@ -546,8 +541,8 @@ namespace OWL2OAS
             getOperation.tags.Add(classLabel);
 
             // Add pagination parameters
-            getOperation.parameters.Add(new OASDocument.Parameter() { ReferenceTo = "offsetParam" });
-            getOperation.parameters.Add(new OASDocument.Parameter() { ReferenceTo = "limitParam" });
+            getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "offsetParam" });
+            getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "limitParam" });
 
             // Add parameters for each field that can be expressed on this class
             foreach (OntologyProperty property in oClass.IsExhaustiveDomainOf()
@@ -571,7 +566,7 @@ namespace OWL2OAS
                     propertyFormat = xsdOsaMappings[rangeXsdType].Item2;
                 }
 
-                OASDocument.Parameter parameter = new OASDocument.Parameter()
+                OASDocument.Parameter parameter = new OASDocument.Parameter
                 {
                     name = propertyLabel,
                     description = string.Format("Filter value on property '{0}'.", propertyLabel),
@@ -601,7 +596,7 @@ namespace OWL2OAS
             response.content.Add("application/jsonld", content);
 
             // Wrap responses in array
-            content.Schema = new OASDocument.ArrayProperty()
+            content.Schema = new OASDocument.ArrayProperty
             {
                 items = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel))
             };
@@ -617,24 +612,24 @@ namespace OWL2OAS
             putOperation.tags.Add(classLabel);
 
             // Add the ID parameter
-            OASDocument.Parameter idParameter = new OASDocument.Parameter()
+            OASDocument.Parameter idParameter = new OASDocument.Parameter
             {
                 name = "id",
                 description = string.Format("Id of '{0}' to update.", classLabel),
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
                 schema = new Dictionary<string, string> {
-                            { "type", "string" },
+                            { "type", "string" }
                         }
             };
-            OASDocument.Parameter bodyParameter = new OASDocument.Parameter()
+            OASDocument.Parameter bodyParameter = new OASDocument.Parameter
             {
                 name = "entity",
                 description = string.Format("Updated data for '{0}' entity.", classLabel),
                 InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
                 schema = new Dictionary<string, string> {
-                            { "$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel) },
+                            { "$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel) }
                         }
             };
             putOperation.parameters.Add(idParameter);
@@ -676,10 +671,10 @@ namespace OWL2OAS
             IUriNode maxCardinality = graph.CreateUriNode(VocabularyHelper.OWL.maxCardinality);
             IUriNode maxQualifiedCardinality = graph.CreateUriNode(VocabularyHelper.OWL.maxQualifiedCardinality);
 
-            if (restriction.GetNodesViaProperty(onProperty).UriNodes().Where(node => node.IsOntologyProperty()).Count() == 1)
+            if (restriction.GetNodesViaProperty(onProperty).UriNodes().Count(node => node.IsOntologyProperty()) == 1)
             {
                 PropertyConstraint pc = new PropertyConstraint();
-                IUriNode restrictionPropertyNode = restriction.GetNodesViaProperty(onProperty).UriNodes().Where(node => node.IsOntologyProperty()).First();
+                IUriNode restrictionPropertyNode = restriction.GetNodesViaProperty(onProperty).UriNodes().First(node => node.IsOntologyProperty());
                 pc.property = restrictionPropertyNode;
 
                 IEnumerable<INode> exactCardinalities = restriction.GetNodesViaProperty(cardinality).Union(restriction.GetNodesViaProperty(qualifiedCardinality));

@@ -15,21 +15,21 @@ namespace OWL2OAS
         /// <summary>
         /// Initialise the paths block. By default holds only an HTTP GET for the JSON-LD @context endpoint.
         /// </summary>
-        public Dictionary<string, Path> paths = new Dictionary<string, Path>()
+        public Dictionary<string, Path> paths = new Dictionary<string, Path>
         {
-            { "/JsonLdContext", new Path()
+            { "/JsonLdContext", new Path
                 {
-                    get = new Operation()
+                    get = new Operation
                     {
                         summary = "Get the JSON-LD @context for this API, i.e., the set of ontologies that were used to generate the API.",
-                        responses = new Dictionary<string, Response>()
+                        responses = new Dictionary<string, Response>
                         {
-                            { "200", new Response()
+                            { "200", new Response
                                 {
                                     description = "A JSON-LD @context declaration.",
-                                    content = new Dictionary<string, Content>()
+                                    content = new Dictionary<string, Content>
                                     {
-                                        { "application/jsonld", new Content()
+                                        { "application/jsonld", new Content
                                             {
                                                 Schema = new SchemaReferenceProperty("Context")
                                             }
@@ -94,7 +94,7 @@ namespace OWL2OAS
         public class Components
         {
             public Dictionary<string, Parameter> parameters = new Dictionary<string, Parameter> {
-                { "offsetParam", new Parameter()
+                { "offsetParam", new Parameter
                     {
                         name = "offset",
                         description = "Number of items to skip before returning the results.",
@@ -104,12 +104,12 @@ namespace OWL2OAS
                             { "type", "integer" },
                             { "format", "int32" },
                             { "minimum", "0" },
-                            { "default", "0" },
+                            { "default", "0" }
                         }
                     }
                 },
                 {
-                    "limitParam", new Parameter()
+                    "limitParam", new Parameter
                     {
                         name = "limit",
                         description = "Maximum number of items to return.",
@@ -120,7 +120,7 @@ namespace OWL2OAS
                             { "format", "int32" },
                             { "minimum", "1" },
                             { "maximum", "100" },
-                            { "default", "20" },
+                            { "default", "20" }
                         }
                     }
                 }
