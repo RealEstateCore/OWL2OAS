@@ -24,6 +24,7 @@ namespace OWL2OAS
             public static readonly Uri Restriction = new Uri("http://www.w3.org/2002/07/owl#Restriction");
             public static readonly Uri FunctionalProperty = new Uri("http://www.w3.org/2002/07/owl#FunctionalProperty");
             public static readonly Uri versionIRI = new Uri("http://www.w3.org/2002/07/owl#versionIRI");
+            public static readonly Uri deprecated = new Uri("http://www.w3.org/2002/07/owl#deprecated");
 
             #region Restrictions
             public static readonly Uri onProperty = new Uri("http://www.w3.org/2002/07/owl#onProperty");

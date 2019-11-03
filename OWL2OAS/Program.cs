@@ -753,7 +753,6 @@ namespace OWL2OAS
 
                 // Only proceed if we have not seen this graph before, otherwise we
                 // risk unecessary fetches and computation, and possibly import loops.
-                // TODO: Replace the below with proper equals() comparisson on the Ontology
                 if (!importedOntologies.Select(ontology => ontology.Graph).Contains(importedOntologyGraph)) { 
 
                     // Set up a new ontology metadata object from the imported ontology graph,

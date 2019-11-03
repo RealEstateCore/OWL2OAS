@@ -196,7 +196,7 @@ namespace OWL2OAS
 
         public static bool IsDeprecated(this OntologyResource resource)
         {
-            IUriNode deprecated = resource.Graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#deprecated"));
+            IUriNode deprecated = resource.Graph.CreateUriNode(VocabularyHelper.OWL.deprecated);
             return resource.GetNodesViaProperty(deprecated).LiteralNodes().Any(node => node.Value == "true");
         }
 
