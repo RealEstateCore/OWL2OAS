@@ -13,6 +13,25 @@ namespace OWL2OAS
     /// </summary>
     public static class DotNetRdfExtensions
     {
+
+        /// <summary>
+        /// Custom comparer for OntologyResource objects, that simply
+        /// defers to comparison of nested INodes.
+        /// </summary>
+        class OntologyResourceComparer : IEqualityComparer<OntologyResource>
+        {
+            public bool Equals(OntologyResource x, OntologyResource y)
+            {
+                return x.Resource == y.Resource;
+            }
+
+            public int GetHashCode(OntologyResource obj)
+            {
+                return obj.Resource.GetHashCode();
+            }
+        }
+
+
         public static bool IsDataProperty(this OntologyProperty property)
         {
             return property.Types.UriNodes().Any(propertyType => propertyType.Uri.ToString().Equals(OntologyHelper.OwlDatatypeProperty));
@@ -25,6 +44,31 @@ namespace OWL2OAS
             IEnumerable<IUriNode> propertyNodes = cls.SuperClasses.Where(superClass => superClass.IsRestriction())
                 .SelectMany(restriction => restriction.GetNodesViaProperty(onProperty)).UriNodes();
             return propertyNodes.SelectMany(node => graph.OwlProperties.Where(oProperty => oProperty.Resource.Equals(node)));
+        }
+
+        public static IEnumerable<OntologyProperty> DataProperties(this IEnumerable<OntologyProperty> properties)
+        {
+            return properties.Where(property => property.IsDataProperty());
+        }
+
+        public static IEnumerable<OntologyProperty> ObjectProperties(this IEnumerable<OntologyProperty> properties)
+        {
+            return properties.Where(property => property.IsObjectProperty());
+        }
+
+        public static OntologyGraph OntologyGraph(this OntologyResource resource)
+        {
+            // TODO: Check if this is potentially explosive design
+            return resource.Graph as OntologyGraph;
+        }
+
+        public static IEnumerable<OntologyProperty> IsExhaustiveDomainOf(this OntologyClass oClass)
+        {
+            IEnumerable<OntologyProperty> directDomainProperties = oClass.IsDomainOf;
+            IEnumerable<OntologyProperty> indirectDomainProperties = oClass.SuperClasses.SelectMany(cls => cls.IsDomainOf);
+            IEnumerable<OntologyProperty> scopedDomainProperties = oClass.IsScopedDomainOf();
+            IEnumerable<OntologyProperty> allDomainProperties = directDomainProperties.Union(indirectDomainProperties).Union(scopedDomainProperties);
+            return allDomainProperties.Distinct(new OntologyResourceComparer()).Select(ontResource => ontResource as OntologyProperty);
         }
 
         public static bool IsDeprecated(this OntologyResource resource)

@@ -83,23 +83,6 @@ namespace OWL2OAS
             }
         }
 
-        /// <summary>
-        /// Custom comparer for OntologyResource objects, that simply
-        /// defers to comparison of nested INodes.
-        /// </summary>
-        class OntologyResourceComparer : IEqualityComparer<OntologyResource>
-        {
-            public bool Equals(OntologyResource x, OntologyResource y)
-            {
-                return x.Resource == y.Resource;
-            }
-
-            public int GetHashCode(OntologyResource obj)
-            {
-                return obj.Resource.GetHashCode();
-            }
-        }
-
         static void Main(string[] args)
         {
             Parser.Default.ParseArguments<Options>(args)
@@ -254,7 +237,7 @@ namespace OWL2OAS
             DumpAsYaml(document);
         }
 
-        private static string GetKeyNameForClass(OntologyGraph graph, OntologyClass cls)
+        private static string GetKeyNameForResource(OntologyGraph graph, OntologyResource cls)
         {
             if (graph.Equals(rootOntology.Graph))
             {
@@ -271,10 +254,10 @@ namespace OWL2OAS
         private static void GenerateClassSchemas(OntologyGraph graph, OASDocument document)
         {
             // Iterate over all classes
-            foreach (OntologyClass c in graph.OwlClasses.Where(oClass => oClass.IsNamed() && !oClass.IsDeprecated()))
+            foreach (OntologyClass oClass in graph.OwlClasses.Where(oClass => oClass.IsNamed() && !oClass.IsDeprecated()))
             {
                 // Get key name for API
-                string classLabel = GetKeyNameForClass(graph, c);
+                string classLabel = GetKeyNameForResource(graph, oClass);
 
                 // Create schema for class and corresponding properties dict
                 OASDocument.Schema schema = new OASDocument.Schema();
@@ -282,7 +265,7 @@ namespace OWL2OAS
 
                 // Iterate over superclasses, extract constraints
                 Dictionary<IUriNode, PropertyConstraint> constraints = new Dictionary<IUriNode, PropertyConstraint>();
-                foreach (OntologyClass superClass in c.SuperClasses)
+                foreach (OntologyClass superClass in oClass.SuperClasses)
                 {
                     if (superClass.IsRestriction())
                     {
@@ -306,7 +289,7 @@ namespace OWL2OAS
                 OASDocument.Property typeProperty = new OASDocument.Property
                 {
                     type = "string",
-                    DefaultValue = c.GetLocalName()
+                    DefaultValue = oClass.GetLocalName()
                 };
                 schema.properties.Add("@type", typeProperty);
 
@@ -316,21 +299,17 @@ namespace OWL2OAS
                 schema.properties.Add("label", labelProperty);
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
-                IEnumerable<OntologyProperty> directDomainProperties = c.IsDomainOf;
-                IEnumerable<OntologyProperty> indirectDomainProperties = c.SuperClasses.SelectMany(cls => cls.IsDomainOf);
-                IEnumerable<OntologyProperty> scopedDomainProperties = c.IsScopedDomainOf();
-                IEnumerable<OntologyProperty> allProperties = directDomainProperties.Union(indirectDomainProperties).Union(scopedDomainProperties);
-                foreach (OntologyProperty property in allProperties.Distinct(new OntologyResourceComparer()).Where(prop => !prop.IsDeprecated()))
+                IEnumerable<OntologyProperty> allProperties = oClass.IsExhaustiveDomainOf();
+                foreach (OntologyProperty property in allProperties.Where(prop => !prop.IsDeprecated()))
                 {
                     // We only process (named) object and data properties with singleton ranges.
                     if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1)
                     {
-
                         // Used for lookups against constraints dict
                         UriNode propertyNode = ((UriNode)property.Resource);
 
                         // Used to allocate property to schema.properties dictionary
-                        string propertyLocalName = propertyNode.GetLocalName();
+                        string propertyLabel = GetKeyNameForResource(graph, property);
 
                         // The return value: a property block to be added to the output document
                         OASDocument.Property outputProperty;
@@ -420,12 +399,12 @@ namespace OWL2OAS
                                 if (pc.exactly != 0)
                                     arrayProperty.maxItems = arrayProperty.minItems = pc.exactly;
                             }
-                            schema.properties.Add(propertyLocalName, arrayProperty);
+                            schema.properties.Add(propertyLabel, arrayProperty);
                         }
                         else
                         {
                             // This is a single-valued property, assign it w/o the array
-                            schema.properties.Add(propertyLocalName, outputProperty);
+                            schema.properties.Add(propertyLabel, outputProperty);
                         }
 
                         // Tag any min 1 or exactly 1 properties as required
@@ -433,7 +412,7 @@ namespace OWL2OAS
                         {
                             if (schema.required == null)
                                 schema.required = new List<string>();
-                            schema.required.Add(propertyLocalName);
+                            schema.required.Add(propertyLabel);
                         }
                     }
                 }
@@ -441,19 +420,18 @@ namespace OWL2OAS
             }
         }
 
-        // TODO: move boilerplate code below into OASDocument
-        private static void GenerateClassPaths(OntologyGraph g, OASDocument document)
+        private static void GenerateClassPaths(OntologyGraph graph, OASDocument document)
         {
             // Iterate over all classes
-            foreach (OntologyClass c in g.OwlClasses.Where(oClass => oClass.IsNamed() && !oClass.IsDeprecated()))
+            foreach (OntologyClass oClass in graph.OwlClasses.Where(oClass => oClass.IsNamed() && !oClass.IsDeprecated()))
             {
                 // Get key name for API
-                string classLabel = GetKeyNameForClass(g, c);
+                string classLabel = GetKeyNameForResource(graph, oClass);
 
                 // Create paths and corresponding operations for class
                 document.paths.Add(string.Format("/{0}", classLabel), new OASDocument.Path()
                 {
-                    get = GenerateGetEntitiesOperation(classLabel),
+                    get = GenerateGetEntitiesOperation(classLabel, oClass),
                     post = GeneratePostEntityOperation(classLabel)
                 });
                 document.paths.Add(string.Format("/{0}/{{id}}", classLabel), new OASDocument.Path()
@@ -505,7 +483,7 @@ namespace OWL2OAS
                 InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
                 schema = new Dictionary<string, string> {
-                            { "$ref", "#/components/schemas/" + HttpUtility.HtmlAttributeEncode(classLabel) },
+                            { "$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel) },
                         }
             };
             postOperation.parameters.Add(bodyParameter);
@@ -559,7 +537,7 @@ namespace OWL2OAS
             return getOperation;
         }
 
-        private static OASDocument.Operation GenerateGetEntitiesOperation(string classLabel)
+        private static OASDocument.Operation GenerateGetEntitiesOperation(string classLabel, OntologyClass oClass)
         {
 
             // Create Get
@@ -570,6 +548,48 @@ namespace OWL2OAS
             // Add pagination parameters
             getOperation.parameters.Add(new OASDocument.Parameter() { ReferenceTo = "offsetParam" });
             getOperation.parameters.Add(new OASDocument.Parameter() { ReferenceTo = "limitParam" });
+
+            // Add parameters for each field that can be expressed on this class
+            foreach (OntologyProperty property in oClass.IsExhaustiveDomainOf()
+                .Where(property => property.IsDataProperty() || property.IsObjectProperty())
+                .Where(property => property.Ranges.Count() == 1)
+                .Where(property => !property.IsDeprecated()))
+            {
+                string propertyLabel = GetKeyNameForResource(property.OntologyGraph(), property);
+
+                // Fall back to string representation and no format for object properties
+                // abd data properties w/ unknown types
+                string propertyType = "string";
+                string propertyFormat = "";
+
+                // Parse XSD type into OAS type and format (note: not all XSD types are covered)
+                string rangeXsdType = ((UriNode)property.Ranges.First().Resource).GetLocalName();
+                
+                if (xsdOsaMappings.ContainsKey(rangeXsdType))
+                {
+                    propertyType = xsdOsaMappings[rangeXsdType].Item1;
+                    propertyFormat = xsdOsaMappings[rangeXsdType].Item2;
+                }
+
+                OASDocument.Parameter parameter = new OASDocument.Parameter()
+                {
+                    name = propertyLabel,
+                    description = string.Format("Filter value on property '{0}'.", propertyLabel),
+                    required = false,
+                    schema = new Dictionary<string, string>
+                    {
+                        { "type", propertyType }
+                    },
+                    InField = OASDocument.Parameter.InFieldValues.query
+                };
+
+                if (propertyFormat.Length > 0)
+                {
+                    parameter.schema.Add("format", propertyFormat);
+                }
+
+                getOperation.parameters.Add(parameter);
+            }
 
             // Create each of the HTTP response types
             OASDocument.Response response = new OASDocument.Response();
@@ -614,7 +634,7 @@ namespace OWL2OAS
                 InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
                 schema = new Dictionary<string, string> {
-                            { "$ref", "#/components/schemas/" + HttpUtility.HtmlAttributeEncode(classLabel) },
+                            { "$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel) },
                         }
             };
             putOperation.parameters.Add(idParameter);
