@@ -1,5 +1,5 @@
 
-﻿# The OWL2OAS Converter
+# The OWL2OAS Converter
 
 **Author:** [Karl Hammar](https://karlhammar.com)
 
