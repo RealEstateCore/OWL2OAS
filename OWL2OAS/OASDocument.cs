@@ -177,6 +177,7 @@ namespace OWL2OAS
         {
             public Operation get;
             public Operation put;
+            public Operation post;
         }
 
         public class Operation

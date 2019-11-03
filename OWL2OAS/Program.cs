@@ -454,7 +454,8 @@ namespace OWL2OAS
                 // TODO: POST
                 document.paths.Add(string.Format("/{0}", classLabel), new OASDocument.Path()
                 {
-                    get = GenerateGetEntitiesOperation(classLabel)
+                    get = GenerateGetEntitiesOperation(classLabel),
+                    post = GeneratePostEntityOperation(classLabel)
                 });
                 document.paths.Add(string.Format("/{0}/{{id}}", classLabel), new OASDocument.Path()
                 {
@@ -462,6 +463,39 @@ namespace OWL2OAS
                     put = GeneratePutToIdOperation(classLabel)
                 });
             }
+        }
+
+        private static OASDocument.Operation GeneratePostEntityOperation(string classLabel)
+        {
+            OASDocument.Operation postOperation = new OASDocument.Operation();
+            postOperation.summary = string.Format("Create a new '{0}' object.", classLabel);
+            postOperation.tags.Add(classLabel);
+
+            OASDocument.Parameter bodyParameter = new OASDocument.Parameter()
+            {
+                name = "entity",
+                description = string.Format("New '{0}' entity that is to be added.", classLabel),
+                InField = OASDocument.Parameter.InFieldValues.header,
+                required = true,
+                schema = new Dictionary<string, string> {
+                            { "$ref", "#/components/schemas/" + HttpUtility.HtmlAttributeEncode(classLabel) },
+                        }
+            };
+            postOperation.parameters.Add(bodyParameter);
+
+            // Create each of the HTTP response types
+            OASDocument.Response response = new OASDocument.Response();
+            response.description = "Entity was successfully created (new representation returned).";
+            postOperation.responses.Add("200", response);
+
+            response.content = new Dictionary<string, OASDocument.Content>();
+            OASDocument.Content content = new OASDocument.Content();
+            response.content.Add("application/jsonld", content);
+
+            // Response is per previously defined schema
+            content.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+
+            return postOperation;
         }
 
         private static OASDocument.Operation GenerateGetEntityByIdOperation(string classLabel)
