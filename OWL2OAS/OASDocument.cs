@@ -178,6 +178,7 @@ namespace OWL2OAS
             public Operation get;
             public Operation put;
             public Operation post;
+            public Operation delete;
         }
 
         public class Operation

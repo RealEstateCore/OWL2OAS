@@ -451,7 +451,6 @@ namespace OWL2OAS
                 string classLabel = GetKeyNameForClass(g, c);
 
                 // Create paths and corresponding operations for class
-                // TODO: POST
                 document.paths.Add(string.Format("/{0}", classLabel), new OASDocument.Path()
                 {
                     get = GenerateGetEntitiesOperation(classLabel),
@@ -460,9 +459,37 @@ namespace OWL2OAS
                 document.paths.Add(string.Format("/{0}/{{id}}", classLabel), new OASDocument.Path()
                 {
                     get = GenerateGetEntityByIdOperation(classLabel),
-                    put = GeneratePutToIdOperation(classLabel)
+                    put = GeneratePutToIdOperation(classLabel),
+                    delete = GenerateDeleteByIdOperation(classLabel)
                 });
             }
+        }
+
+        private static OASDocument.Operation GenerateDeleteByIdOperation(string classLabel)
+        {
+            OASDocument.Operation deleteOperation = new OASDocument.Operation();
+            deleteOperation.summary = string.Format("Delete a '{0}' object.", classLabel);
+            deleteOperation.tags.Add(classLabel);
+
+            // Add the ID parameter
+            OASDocument.Parameter idParameter = new OASDocument.Parameter()
+            {
+                name = "id",
+                description = string.Format("Id of '{0}' to delete.", classLabel),
+                InField = OASDocument.Parameter.InFieldValues.path,
+                required = true,
+                schema = new Dictionary<string, string> {
+                            { "type", "string" },
+                        }
+            };
+            deleteOperation.parameters.Add(idParameter);
+
+            // Create each of the HTTP response types
+            OASDocument.Response response = new OASDocument.Response();
+            response.description = string.Format("'{0}' entity was successfully deleted.", classLabel);
+            deleteOperation.responses.Add("default", response);
+
+            return deleteOperation;
         }
 
         private static OASDocument.Operation GeneratePostEntityOperation(string classLabel)
