@@ -172,7 +172,7 @@ namespace OWL2OAS
                 throw new RdfException(string.Format("Ontology <{0}> does not have an <cc:license> annotation that is a URI or literal.", rootOntology));
             }
             document.info.title = rootOntology.GetNodesViaProperty(dcTitle).LiteralNodes().OrderBy(title => title.HasLanguage()).First().Value;
-            document.info.version = rootOntology.VersionInfo.OrderBy(versionInfo => versionInfo.HasLanguage()).First().Value;
+            document.info.Version = rootOntology.VersionInfo.OrderBy(versionInfo => versionInfo.HasLanguage()).First().Value;
             document.info.license = new OASDocument.License();
             INode licenseNode = rootOntology.GetNodesViaProperty(ccLicense).OrderBy(node => node.NodeType).First();
             if (licenseNode.IsUri())
@@ -205,7 +205,7 @@ namespace OWL2OAS
             {
                 type = "string",
                 format = "uri",
-                defaultValue = rootOntology.GetVersionOrOntologyIri().ToString()
+                DefaultValue = rootOntology.GetVersionOrOntologyIri().ToString()
             };
             OASDocument.Property baseNamespaceProperty = new OASDocument.Property()
             {
@@ -216,7 +216,7 @@ namespace OWL2OAS
             {
                 type = "string",
                 format = "uri",
-                defaultValue = VocabularyHelper.RDFS.label.ToString()
+                DefaultValue = VocabularyHelper.RDFS.label.ToString()
             };
             OASDocument.Schema contextSchema = new OASDocument.Schema()
             {
@@ -234,7 +234,7 @@ namespace OWL2OAS
                 {
                     type = "string",
                     format = "uri",
-                    defaultValue = importedOntology.GetVersionOrOntologyIri().ToString()
+                    DefaultValue = importedOntology.GetVersionOrOntologyIri().ToString()
                 };
                 contextSchema.properties.Add(importedOntology.GetShortName(), importedVocabularyProperty);
                 contextSchema.required.Add(importedOntology.GetShortName());
@@ -306,7 +306,7 @@ namespace OWL2OAS
                 OASDocument.Property typeProperty = new OASDocument.Property
                 {
                     type = "string",
-                    defaultValue = c.GetLocalName()
+                    DefaultValue = c.GetLocalName()
                 };
                 schema.properties.Add("@type", typeProperty);
 
@@ -383,7 +383,7 @@ namespace OWL2OAS
                                 OASDocument.Property nestedTypeProperty = new OASDocument.Property()
                                 {
                                     type = "string",
-                                    defaultValue = range.GetLocalName()
+                                    DefaultValue = range.GetLocalName()
                                 };
                                 uriProperty = new OASDocument.ObjectProperty()
                                 {
@@ -493,7 +493,7 @@ namespace OWL2OAS
             response.content.Add("application/jsonld", content);
 
             // Response is per previously defined schema
-            content.schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+            content.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
 
             return getOperation;
         }
@@ -520,7 +520,7 @@ namespace OWL2OAS
             response.content.Add("application/jsonld", content);
 
             // Wrap responses in array
-            content.schema = new OASDocument.ArrayProperty()
+            content.Schema = new OASDocument.ArrayProperty()
             {
                 items = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel))
             };
@@ -569,7 +569,7 @@ namespace OWL2OAS
             response.content.Add("application/jsonld", content);
 
             // Response is per previously defined schema
-            content.schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+            content.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
 
             return putOperation;
         }

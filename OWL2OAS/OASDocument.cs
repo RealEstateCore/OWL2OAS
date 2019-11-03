@@ -8,9 +8,9 @@ namespace OWL2OAS
 {
     class OASDocument
     {
-        public string openapi { get { return "3.0.0"; } }
-        public Info info { get; set; }
-        public Components components { get; set; }
+        public readonly string openapi = "3.0.0";
+        public Info info;
+        public Components components;
 
         /// <summary>
         /// Initialise the paths block. By default holds only an HTTP GET for the JSON-LD @context endpoint.
@@ -31,7 +31,7 @@ namespace OWL2OAS
                                     {
                                         { "application/jsonld", new Content()
                                             {
-                                                schema = new SchemaReferenceProperty("Context")
+                                                Schema = new SchemaReferenceProperty("Context")
                                             }
                                         }
                                     }
@@ -46,10 +46,10 @@ namespace OWL2OAS
 
         public class Info
         {
-            [YamlMember(ScalarStyle = ScalarStyle.DoubleQuoted)]
-            public string version { get; set; }
-            public string title { get; set; }
-            public License license { get; set; }
+            [YamlMember(ScalarStyle = ScalarStyle.DoubleQuoted, Alias = "version")]
+            public string Version { get; set; }
+            public string title;
+            public License license;
             public string description;
         }
 
@@ -93,7 +93,6 @@ namespace OWL2OAS
 
         public class Components
         {
-
             public Dictionary<string, Parameter> parameters = new Dictionary<string, Parameter> {
                 { "offsetParam", new Parameter()
                     {
@@ -126,19 +125,19 @@ namespace OWL2OAS
                     }
                 }
             };
-            public Dictionary<string, Schema> schemas { get; set; }
+            public Dictionary<string, Schema> schemas;
         }
         
         public class Schema
         {
-            public string type { get { return "object";  } }
+            public readonly string type = "object";
             public List<string> required;
             public Dictionary<string, Property> properties;
         }
 
         public class ObjectProperty: Property
         {
-            public new string type { get { return "object"; } }
+            public new readonly string type = "object";
             public Dictionary<string, Property> properties;
             public List<string> required;
         }
@@ -156,17 +155,17 @@ namespace OWL2OAS
             public string type;
             public string format;
             [YamlMember(Alias = "default")]
-            public string defaultValue { get; set; }
+            public string DefaultValue { get; set; }
         }
 
         public class SchemaReferenceProperty : Property
         {
             public SchemaReferenceProperty(string referenceType)
             {
-                reference = "#/components/schemas/" + referenceType;
+                Reference = "#/components/schemas/" + referenceType;
             }
             [YamlMember(Alias = "$ref")]
-            public string reference { get; set; }
+            public string Reference { get; set; }
         }
 
         public class PropertyItems
@@ -176,8 +175,8 @@ namespace OWL2OAS
 
         public class Path
         {
-            public Operation get { get; set; }
-            public Operation put { get; set; }
+            public Operation get;
+            public Operation put;
         }
 
         public class Operation
@@ -191,13 +190,13 @@ namespace OWL2OAS
         public class Response
         {
             public string description { get; set; }
-            public Dictionary<string, Content> content { get; set; }
+            public Dictionary<string, Content> content;
         }
 
         public class Content
         {
-            [YamlMember(ScalarStyle = ScalarStyle.DoubleQuoted)]
-            public Property schema { get; set; }
+            [YamlMember(ScalarStyle = ScalarStyle.DoubleQuoted, Alias = "schema")]
+            public Property Schema { get; set; }
         }
     }
 }
