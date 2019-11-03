@@ -42,3 +42,7 @@ To translate a remote file, use the `-u` option, as follows:
 
   --version           Display version information.
 ```
+
+## Examples
+
+See the [examples directory](tree/master/OWL2OAS/examples).
