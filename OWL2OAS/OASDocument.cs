@@ -8,7 +8,7 @@ namespace OWL2OAS
 {
     class OASDocument
     {
-        public readonly string openapi = "3.0.0";
+        public readonly string openapi = "3.0.2";
         public Info info;
         public Components components;
 
