@@ -135,9 +135,86 @@ namespace OWL2OAS
             // Create OAS object
             OASDocument document = new OASDocument();
 
-            // TODO: Refactor, break out construction of info block into own method for clarity
-            // Create OAS Info header
-            document.info = new OASDocument.Info();
+            // Create the OAS Info header
+            document.info = GenerateDocumentInfo();
+
+            // Server block
+            document.servers = new List<Dictionary<string, string>> { new Dictionary<string, string> { { "url", _server } } };
+
+            // Set up components/schemas structure.
+            document.components = new OASDocument.Components();
+            document.components.schemas = new Dictionary<string, OASDocument.Schema>();
+
+            // Generate and add the Context schema
+            document.components.schemas.Add("Context", GenerateContextSchema());
+
+            // Parse OWL classes.For each class, create a schema and a path
+            GenerateClassSchemas(rootOntologyGraph, document);
+            GenerateClassPaths(rootOntologyGraph, document);
+
+            // Also parse classes in imports
+            foreach (Ontology importedOntology in importedOntologies)
+            {
+                GenerateClassSchemas(importedOntology.Graph as OntologyGraph, document);
+                GenerateClassPaths(importedOntology.Graph as OntologyGraph, document);
+            }
+
+            DumpAsYaml(document);
+        }
+
+        private static OASDocument.Schema GenerateContextSchema()
+        {
+            // Set @context/@vocab based on the ontology IRI
+            OASDocument.Property vocabularyProperty = new OASDocument.Property
+            {
+                type = "string",
+                format = "uri",
+                DefaultValue = rootOntology.GetVersionOrOntologyIri().ToString()
+            };
+            // Set @context/@base (default data namespace)
+            OASDocument.Property baseNamespaceProperty = new OASDocument.Property
+            {
+                type = "string",
+                format = "uri"
+            };
+            // Hardcoded rdfs:label for @context
+            OASDocument.Property labelContextProperty = new OASDocument.Property
+            {
+                type = "string",
+                format = "uri",
+                DefaultValue = VocabularyHelper.RDFS.label.ToString()
+            };
+            // Mash it all together into a @context block
+            OASDocument.Schema contextSchema = new OASDocument.Schema
+            {
+                required = new List<string> { "@vocab", "@base", "label" },
+                properties = new Dictionary<string, OASDocument.Property> {
+                    { "@vocab", vocabularyProperty },
+                    { "@base", baseNamespaceProperty },
+                    { "label", labelContextProperty }
+                }
+            };
+            // Add each imported ontology to the @context
+            foreach (Ontology importedOntology in importedOntologies)
+            {
+                OASDocument.Property importedVocabularyProperty = new OASDocument.Property
+                {
+                    type = "string",
+                    format = "uri",
+                    DefaultValue = importedOntology.GetVersionOrOntologyIri().ToString()
+                };
+                contextSchema.properties.Add(importedOntology.GetShortName(), importedVocabularyProperty);
+                contextSchema.required.Add(importedOntology.GetShortName());
+            }
+
+            return contextSchema;
+        }
+
+        private static OASDocument.Info GenerateDocumentInfo()
+        {
+            OASDocument.Info docInfo = new OASDocument.Info();
+
+            OntologyGraph rootOntologyGraph = rootOntology.OntologyGraph();
 
             // Check for mandatory components (dc:title, version info, cc:license).
             IUriNode dcTitle = rootOntologyGraph.CreateUriNode(VocabularyHelper.DC.title);
@@ -154,18 +231,18 @@ namespace OWL2OAS
             {
                 throw new RdfException(string.Format("Ontology <{0}> does not have an <cc:license> annotation that is a URI or literal.", rootOntology));
             }
-            document.info.title = rootOntology.GetNodesViaProperty(dcTitle).LiteralNodes().OrderBy(title => title.HasLanguage()).First().Value;
-            document.info.Version = rootOntology.VersionInfo.OrderBy(versionInfo => versionInfo.HasLanguage()).First().Value;
-            document.info.license = new OASDocument.License();
+            docInfo.title = rootOntology.GetNodesViaProperty(dcTitle).LiteralNodes().OrderBy(title => title.HasLanguage()).First().Value;
+            docInfo.Version = rootOntology.VersionInfo.OrderBy(versionInfo => versionInfo.HasLanguage()).First().Value;
+            docInfo.license = new OASDocument.License();
             INode licenseNode = rootOntology.GetNodesViaProperty(ccLicense).OrderBy(node => node.NodeType).First();
             if (licenseNode.IsUri())
             {
-                document.info.license.name = ((UriNode)licenseNode).GetLocalName();
-                document.info.license.url = ((UriNode)licenseNode).Uri.ToString();
+                docInfo.license.name = ((UriNode)licenseNode).GetLocalName();
+                docInfo.license.url = ((UriNode)licenseNode).Uri.ToString();
             }
             else
             {
-                document.info.license.name = ((LiteralNode)licenseNode).Value;
+                docInfo.license.name = ((LiteralNode)licenseNode).Value;
             }
 
             // Non-mandatory info components, e.g., rdfs:comment
@@ -173,68 +250,10 @@ namespace OWL2OAS
             if (rootOntology.GetNodesViaProperty(dcDescription).LiteralNodes().Any())
             {
                 string ontologyDescription = rootOntology.GetNodesViaProperty(dcDescription).LiteralNodes().OrderBy(description => description.HasLanguage()).First().Value.Trim().Replace("\r\n", "\n").Replace("\n", "<br/>");
-                document.info.description = string.Format("The documentation below is automatically extracted from a <dc:description> annotation on the ontology {0}:<br/><br/>*{1}*", rootOntology, ontologyDescription);
+                docInfo.description = string.Format("The documentation below is automatically extracted from a <dc:description> annotation on the ontology {0}:<br/><br/>*{1}*", rootOntology, ontologyDescription);
             }
 
-            // Server block
-            document.servers = new List<Dictionary<string, string>> { new Dictionary<string, string> { { "url", _server } } };
-
-            // Parse OWL classes. For each class, create a schema and a path
-            document.components = new OASDocument.Components();
-            Dictionary<string, OASDocument.Schema> schemas = new Dictionary<string, OASDocument.Schema>();
-
-            // Set context based on the ontology IRI
-            OASDocument.Property vocabularyProperty = new OASDocument.Property
-            {
-                type = "string",
-                format = "uri",
-                DefaultValue = rootOntology.GetVersionOrOntologyIri().ToString()
-            };
-            OASDocument.Property baseNamespaceProperty = new OASDocument.Property
-            {
-                type = "string",
-                format = "uri"
-            };
-            OASDocument.Property labelContextProperty = new OASDocument.Property
-            {
-                type = "string",
-                format = "uri",
-                DefaultValue = VocabularyHelper.RDFS.label.ToString()
-            };
-            OASDocument.Schema contextSchema = new OASDocument.Schema
-            {
-                required = new List<string> { "@vocab", "@base", "label" },
-                properties = new Dictionary<string, OASDocument.Property> {
-                    { "@vocab", vocabularyProperty },
-                    { "@base", baseNamespaceProperty },
-                    { "label", labelContextProperty }
-                }
-            };
-            // Add each imported ontology to the context
-            foreach (Ontology importedOntology in importedOntologies)
-            {
-                OASDocument.Property importedVocabularyProperty = new OASDocument.Property
-                {
-                    type = "string",
-                    format = "uri",
-                    DefaultValue = importedOntology.GetVersionOrOntologyIri().ToString()
-                };
-                contextSchema.properties.Add(importedOntology.GetShortName(), importedVocabularyProperty);
-                contextSchema.required.Add(importedOntology.GetShortName());
-            }
-            schemas.Add("Context", contextSchema);
-            document.components.schemas = schemas;
-
-            GenerateClassSchemas(rootOntologyGraph, document);
-            GenerateClassPaths(rootOntologyGraph, document);
-
-            foreach (Ontology importedOntology in importedOntologies)
-            {
-                GenerateClassSchemas(importedOntology.Graph as OntologyGraph, document);
-                GenerateClassPaths(importedOntology.Graph as OntologyGraph, document);
-            }
-
-            DumpAsYaml(document);
+            return docInfo;
         }
 
         private static string GetKeyNameForResource(OntologyGraph graph, OntologyResource cls)
