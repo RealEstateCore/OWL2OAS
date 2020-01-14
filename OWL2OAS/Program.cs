@@ -33,7 +33,7 @@ namespace OWL2OAS
         /// <summary>
         /// Set of transitively imported child ontologies.
         /// </summary>
-        private static readonly HashSet<Ontology> importedOntologies = new HashSet<Ontology>();
+        private static readonly HashSet<Ontology> importedOntologies = new HashSet<Ontology>(new DotNetRdfExtensions.OntologyComparer());
 
         // Various configuration fields
         private static string _server;
@@ -737,13 +737,16 @@ namespace OWL2OAS
             // We only deal with named ontologies
             if (importedOntology.IsNamed()) {
 
-                // Parse and load ontology from its URI
-                Uri importedOntologyUri = ((IUriNode)importedOntology.Resource).Uri;
-                OntologyGraph importedOntologyGraph = new OntologyGraph();
+                Console.WriteLine("Resolving and importing " + importedOntology.GetIri().ToString());
+
+                // Parse and load ontology from the stated import URI
+                Uri importUri = importedOntology.GetIri();
+                //Uri importedOntologyUri = ((IUriNode)importedOntology.Resource).Uri;
+                OntologyGraph fetchedOntologyGraph = new OntologyGraph();
 
                 try
                 {
-                    UriLoader.Load(importedOntologyGraph, importedOntologyUri);
+                    UriLoader.Load(fetchedOntologyGraph, importUri);
                 }
                 catch (RdfParseException e)
                 {
@@ -751,20 +754,22 @@ namespace OWL2OAS
                     Console.Write(e.StackTrace);
                 }
 
-                // Only proceed if we have not seen this graph before, otherwise we
-                // risk unecessary fetches and computation, and possibly import loops.
-                if (!importedOntologies.Select(ontology => ontology.Graph).Contains(importedOntologyGraph)) { 
+                // Set up a new ontology metadata object from the retrieved ontology graph.
+                // This is needed since this ontology's self-defined IRI or version IRI often 
+                // differs from the IRI through which it was imported (i.e., importedOntology in 
+                // this method's signature), due to .htaccess redirects, version URIs, etc.
+                Ontology importedOntologyFromFetchedGraph = fetchedOntologyGraph.GetOntology();
 
-                    // Set up a new ontology metadata object from the imported ontology graph,
-                    // add it to the global imports collection and traverse its import hierarchy
-                    // transitively (if we haven't imported it before).
-                    // Note that this ontology IRI often differs from the URI given by
-                    // the importing ontology above (from which the file was fetched),
-                    // due to .htaccess redirects, version URIs, etc.
-                    Ontology importedOntologyFromSelfDefinition = importedOntologyGraph.GetOntology();
-                
-                    importedOntologies.Add(importedOntologyFromSelfDefinition);
-                    foreach (Ontology subImport in importedOntologyFromSelfDefinition.Imports)
+                // Only proceed if we have not seen this fetched ontology before, otherwise we risk 
+                // unecessary fetches and computation, and possibly import loops.
+                // Note that importedOntologies uses a custom comparer from DotNetRdfExtensions, 
+                // since the Ontology class does not implement IComparable
+                if (!importedOntologies.Contains(importedOntologyFromFetchedGraph))
+                {
+                    // Add imported ontology to the global imports collection and traverse its 
+                    // import hierarchy transitively
+                    importedOntologies.Add(importedOntologyFromFetchedGraph);
+                    foreach (Ontology subImport in importedOntologyFromFetchedGraph.Imports)
                     {
                         LoadImport(subImport);
                     }

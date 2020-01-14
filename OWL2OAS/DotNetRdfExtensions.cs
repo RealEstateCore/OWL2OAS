@@ -30,6 +30,36 @@ namespace OWL2OAS
                 return obj.Resource.GetHashCode();
             }
         }
+
+        /// <summary>
+        /// Custom comparer for Ontology objects, based on W3C OWL2 specification for version IRIs.
+        /// See https://www.w3.org/TR/owl2-syntax/#Ontology_IRI_and_Version_IRI
+        /// </summary>
+        public class OntologyComparer : IEqualityComparer<Ontology>
+        {
+            
+            public bool Equals(Ontology x, Ontology y)
+            {
+                return 
+                    !x.HasVersionIri() && !y.HasVersionIri() && (x.GetIri() == y.GetIri()) ||
+                    x.HasVersionIri() && y.HasVersionIri() && (x.GetIri() == y.GetIri()) && (x.GetVersionIri() == y.GetVersionIri());
+            }
+
+            // Method borrowed from https://stackoverflow.com/a/263416
+            public int GetHashCode(Ontology x)
+            {
+                // Generate partial hashes from identify-carrying fields, i.e., ontology IRI 
+                // and version IRI; if no version IRI exists, default to partial hash of 0.
+                int oidHash = x.GetIri().GetHashCode();
+                int vidHash = x.HasVersionIri() ? x.GetVersionIri().GetHashCode() : 0;
+
+                // 
+                int hash = 23;
+                hash = hash * 37 + oidHash;
+                hash = hash * 37 + vidHash;
+                return hash;
+            }
+        }
         #endregion
 
         #region INode/ILiteralNode/IUriNode extensions

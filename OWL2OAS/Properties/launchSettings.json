@@ -1,7 +1,8 @@
 {
   "profiles": {
     "OWL2OAS": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "-u https://w3id.org/rec/full/"
     }
   }
 }
