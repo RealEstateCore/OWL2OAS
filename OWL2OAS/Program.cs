@@ -93,7 +93,7 @@ namespace OWL2OAS
         /// <summary>
         /// A struct representing cardinality constraints on a property.
         /// </summary>
-        public struct PropertyCardinalityConstraint
+        public struct PropertyCardinalityConstraints
         {
             public IUriNode property;
             public int min;
@@ -309,16 +309,46 @@ namespace OWL2OAS
                 OASDocument.Schema schema = new OASDocument.Schema();
                 schema.properties = new Dictionary<string, OASDocument.Property>();
 
-                // Iterate over superclasses, extract constraints
-                Dictionary<IUriNode, PropertyCardinalityConstraint> constraints = new Dictionary<IUriNode, PropertyCardinalityConstraint>();
+                // Iterate over superclasses, extract cardinality constraints from OWL restrictions
+                // This dictionary maps properties to the found constraints
+                Dictionary<IUriNode, PropertyCardinalityConstraints> constraints = new Dictionary<IUriNode, PropertyCardinalityConstraints>();
                 foreach (OntologyClass superClass in oClass.SuperClasses)
                 {
                     if (superClass.IsRestriction())
                     {
-                        PropertyCardinalityConstraint? constraint = ExtractCardinalityConstraint(superClass);
-                        if (constraint.HasValue)
+                        // Only proceed if the property restriction is well-formed, i.e., it actually has a property
+                        if (superClass.HasRestrictionProperty()) 
                         {
-                            constraints.Add(constraint.Value.property, constraint.Value);
+                            IUriNode constraintProperty = superClass.GetRestrictionProperty();
+
+                            // Extract prior constraints for property, if we've found any before;
+                            // otherwise create new constraints struct
+                            PropertyCardinalityConstraints pc;
+                            if (constraints.ContainsKey(constraintProperty))
+                            {
+                                pc = constraints[constraintProperty];
+                            }
+                            else
+                            {
+                                pc = new PropertyCardinalityConstraints();
+                            }
+
+                            // Extract cardinality from restriction class (in a well-formed ontology, 
+                            // only one of the below will be non-zero for each restriction)
+                            int min = GetMinCardinality(superClass);
+                            int exactly = GetExactCardinality(superClass);
+                            int max = GetMaxCardinality(superClass);
+
+                            // Update prior constraints with new values, if they are non-zero
+                            if (min != 0)
+                                pc.min = min;
+                            if (exactly != 0)
+                                pc.exactly = exactly;
+                            if (max != 0)
+                                pc.max = max;
+
+                            // Put the constraint back on the constraints dictionary
+                            constraints[constraintProperty] = pc;
                         }
                     }
                 }
@@ -438,7 +468,7 @@ namespace OWL2OAS
                             // Assign constraints on the array, if any
                             if (constraints.ContainsKey(propertyNode))
                             {
-                                PropertyCardinalityConstraint pc = constraints[propertyNode];
+                                PropertyCardinalityConstraints pc = constraints[propertyNode];
                                 if (pc.min != 0)
                                     arrayProperty.minItems = pc.min;
                                 if (pc.max != 0)
@@ -714,65 +744,81 @@ namespace OWL2OAS
             Console.WriteLine("");
         }
 
-        private static PropertyCardinalityConstraint? ExtractCardinalityConstraint(OntologyClass restriction)
+        private static int GetMinCardinality(OntologyClass restriction)
         {
             OntologyGraph graph = restriction.Graph as OntologyGraph;
-            IUriNode onProperty = graph.CreateUriNode(VocabularyHelper.OWL.onProperty);
-            IUriNode cardinality = graph.CreateUriNode(VocabularyHelper.OWL.cardinality);
-            IUriNode qualifiedCardinality = graph.CreateUriNode(VocabularyHelper.OWL.qualifiedCardinality);
             IUriNode someValuesFrom = graph.CreateUriNode(VocabularyHelper.OWL.someValuesFrom);
             IUriNode minCardinality = graph.CreateUriNode(VocabularyHelper.OWL.minCardinality);
             IUriNode minQualifiedCardinality = graph.CreateUriNode(VocabularyHelper.OWL.minQualifiedCardinality);
-            IUriNode maxCardinality = graph.CreateUriNode(VocabularyHelper.OWL.maxCardinality);
-            IUriNode maxQualifiedCardinality = graph.CreateUriNode(VocabularyHelper.OWL.maxQualifiedCardinality);
 
-            if (restriction.GetNodesViaProperty(onProperty).UriNodes().Count(node => node.IsOntologyProperty()) == 1)
+            IEnumerable<INode> minCardinalities = restriction.GetNodesViaProperty(minCardinality).Union(restriction.GetNodesViaProperty(minQualifiedCardinality));
+            if (minCardinalities.LiteralNodes().Count() == 1 &&
+                minCardinalities.LiteralNodes().First().IsInteger())
             {
-                PropertyCardinalityConstraint pc = new PropertyCardinalityConstraint();
-                IUriNode restrictionPropertyNode = restriction.GetNodesViaProperty(onProperty).UriNodes().First(node => node.IsOntologyProperty());
-                pc.property = restrictionPropertyNode;
+                return int.Parse(minCardinalities.LiteralNodes().First().Value);
+            }
 
-                
-                IEnumerable<INode> exactCardinalities = restriction.GetNodesViaProperty(cardinality).Union(restriction.GetNodesViaProperty(qualifiedCardinality));
-                if (exactCardinalities.LiteralNodes().Count() == 1 &&
-                    exactCardinalities.LiteralNodes().First().IsInteger())
-                {
-                    // Exact cardinality -> No need to process further, extract and return.
-                    pc.exactly = int.Parse(exactCardinalities.LiteralNodes().First().Value);
-                    return pc;
-                }
+            if (restriction.GetNodesViaProperty(someValuesFrom).Count() == 1)
+            {
+                return 1;
+            }
 
-                if (restriction.GetNodesViaProperty(someValuesFrom).Count() == 1)
-                {
-                    pc.min = 1;
-                }
+            return 0;
+        }
 
-                IEnumerable <INode> minCardinalities = restriction.GetNodesViaProperty(minCardinality).Union(restriction.GetNodesViaProperty(minQualifiedCardinality));
-                if (minCardinalities.LiteralNodes().Count() == 1 &&
-                    minCardinalities.LiteralNodes().First().IsInteger())
-                {
-                    pc.min = int.Parse(minCardinalities.LiteralNodes().First().Value);
-                }
+        private static int GetExactCardinality(OntologyClass restriction)
+        {
+            OntologyGraph graph = restriction.Graph as OntologyGraph;
+            IUriNode cardinality = graph.CreateUriNode(VocabularyHelper.OWL.cardinality);
+            IUriNode qualifiedCardinality = graph.CreateUriNode(VocabularyHelper.OWL.qualifiedCardinality);
+            IUriNode onClass = graph.CreateUriNode(VocabularyHelper.OWL.onClass);
 
-                IEnumerable<INode> maxCardinalities = restriction.GetNodesViaProperty(maxCardinality).Union(restriction.GetNodesViaProperty(maxQualifiedCardinality));
-                if (maxCardinalities.LiteralNodes().Count() == 1 &&
-                    maxCardinalities.LiteralNodes().First().IsInteger())
-                {
-                    pc.max = int.Parse(maxCardinalities.LiteralNodes().First().Value);
-                }
+            IEnumerable<INode> exactCardinalities = restriction.GetNodesViaProperty(cardinality);
+            if (exactCardinalities.LiteralNodes().Count() == 1 &&
+                exactCardinalities.LiteralNodes().First().IsInteger())
+            {
+                return int.Parse(exactCardinalities.LiteralNodes().First().Value);
+            }
 
-                // Only return the constraint if one of the above cardinality requirements were encountered.
-                // This avoids false positives from unsupported constraints such as owl:allValuesFrom and owl:hasValue.
-                if (pc.min != 0 || pc.max != 0 )
-                {
-                    return pc;
-                }
-                else
-                {
-                    return null;
+            IEnumerable<INode> exactQualifiedCardinalities = restriction.GetNodesViaProperty(qualifiedCardinality);
+            if (exactQualifiedCardinalities.LiteralNodes().Count() == 1 &&
+                exactQualifiedCardinalities.LiteralNodes().First().IsInteger())
+            {
+                IEnumerable<IUriNode> qualifierClasses = restriction.GetNodesViaProperty(onClass).UriNodes();
+                if (qualifierClasses.Count() == 1 && qualifierClasses.First().Uri.Equals(VocabularyHelper.OWL.Thing)) { 
+                    return int.Parse(exactQualifiedCardinalities.LiteralNodes().First().Value);
                 }
             }
-            return null;
+
+            return 0;
+        }
+
+        private static int GetMaxCardinality(OntologyClass restriction)
+        {
+            OntologyGraph graph = restriction.Graph as OntologyGraph;
+            IUriNode maxCardinality = graph.CreateUriNode(VocabularyHelper.OWL.maxCardinality);
+            IUriNode maxQualifiedCardinality = graph.CreateUriNode(VocabularyHelper.OWL.maxQualifiedCardinality);
+            IUriNode onClass = graph.CreateUriNode(VocabularyHelper.OWL.onClass);
+
+            IEnumerable<INode> maxCardinalities = restriction.GetNodesViaProperty(maxCardinality);
+            if (maxCardinalities.LiteralNodes().Count() == 1 &&
+                maxCardinalities.LiteralNodes().First().IsInteger())
+            {
+                return int.Parse(maxCardinalities.LiteralNodes().First().Value);
+            }
+
+            IEnumerable<INode> maxQualifiedCardinalities = restriction.GetNodesViaProperty(maxQualifiedCardinality);
+            if (maxQualifiedCardinalities.LiteralNodes().Count() == 1 &&
+                maxQualifiedCardinalities.LiteralNodes().First().IsInteger())
+            {
+                IEnumerable<IUriNode> qualifierClasses = restriction.GetNodesViaProperty(onClass).UriNodes();
+                if (qualifierClasses.Count() == 1 && qualifierClasses.First().Uri.Equals(VocabularyHelper.OWL.Thing))
+                {
+                    return int.Parse(maxQualifiedCardinalities.LiteralNodes().First().Value);
+                }
+            }
+
+            return 0;
         }
 
         /// <summary>

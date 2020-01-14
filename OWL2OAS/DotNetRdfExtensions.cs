@@ -301,6 +301,22 @@ namespace OWL2OAS
             return oClass.Types.UriNodes().Any(classType => classType.Uri.Equals(VocabularyHelper.OWL.Restriction));
         }
 
+        public static bool HasRestrictionProperty(this OntologyClass oClass)
+        {
+            IUriNode onProperty = oClass.Graph.CreateUriNode(VocabularyHelper.OWL.onProperty);
+            return oClass.GetNodesViaProperty(onProperty).UriNodes().Any(node => node.IsOntologyProperty());
+        }
+
+        public static IUriNode GetRestrictionProperty(this OntologyClass oClass)
+        {
+            if (!oClass.HasRestrictionProperty())
+            {
+                throw new RdfException(string.Format("Ontology class {0} does not have a restriction property.", oClass));
+            }
+            IUriNode onProperty = oClass.Graph.CreateUriNode(VocabularyHelper.OWL.onProperty);
+            return oClass.GetNodesViaProperty(onProperty).UriNodes().First(node => node.IsOntologyProperty());
+        }
+
         public static bool IsXsdDatatype(this OntologyClass oClass)
         {
             if (oClass.IsNamed())

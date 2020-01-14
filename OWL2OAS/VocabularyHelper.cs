@@ -21,6 +21,7 @@ namespace OWL2OAS
         }
         public static class OWL
         {
+            public static readonly Uri Thing = new Uri("http://www.w3.org/2002/07/owl#Thing");
             public static readonly Uri Restriction = new Uri("http://www.w3.org/2002/07/owl#Restriction");
             public static readonly Uri FunctionalProperty = new Uri("http://www.w3.org/2002/07/owl#FunctionalProperty");
             public static readonly Uri versionIRI = new Uri("http://www.w3.org/2002/07/owl#versionIRI");
@@ -28,6 +29,7 @@ namespace OWL2OAS
 
             #region Restrictions
             public static readonly Uri onProperty = new Uri("http://www.w3.org/2002/07/owl#onProperty");
+            public static readonly Uri onClass = new Uri("http://www.w3.org/2002/07/owl#onClass");
             public static readonly Uri cardinality = new Uri("http://www.w3.org/2002/07/owl#cardinality");
             public static readonly Uri qualifiedCardinality = new Uri("http://www.w3.org/2002/07/owl#qualifiedCardinality");
             public static readonly Uri someValuesFrom = new Uri("http://www.w3.org/2002/07/owl#someValuesFrom");
