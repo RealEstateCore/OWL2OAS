@@ -26,6 +26,36 @@ namespace OWL2OAS
         }
 
         /// <summary>
+        /// Custom comparer for Ontology objects, based on W3C OWL2 specification for version IRIs.
+        /// See https://www.w3.org/TR/owl2-syntax/#Ontology_IRI_and_Version_IRI
+        /// </summary>
+        class OntologyComparer : IEqualityComparer<Ontology>
+        {
+
+            public bool Equals(Ontology x, Ontology y)
+            {
+                return
+                    !x.HasVersionIri() && !y.HasVersionIri() && (x.GetIri() == y.GetIri()) ||
+                    x.HasVersionIri() && y.HasVersionIri() && (x.GetIri() == y.GetIri()) && (x.GetVersionIri() == y.GetVersionIri());
+            }
+
+            // Method borrowed from https://stackoverflow.com/a/263416
+            public int GetHashCode(Ontology x)
+            {
+                // Generate partial hashes from identify-carrying fields, i.e., ontology IRI 
+                // and version IRI; if no version IRI exists, default to partial hash of 0.
+                int oidHash = x.GetIri().GetHashCode();
+                int vidHash = x.HasVersionIri() ? x.GetVersionIri().GetHashCode() : 0;
+
+                // 
+                int hash = 23;
+                hash = hash * 37 + oidHash;
+                hash = hash * 37 + vidHash;
+                return hash;
+            }
+        }
+
+        /// <summary>
         /// The ontology being parsed.
         /// </summary>
         private static Ontology rootOntology;
@@ -33,7 +63,7 @@ namespace OWL2OAS
         /// <summary>
         /// Set of transitively imported child ontologies.
         /// </summary>
-        private static readonly HashSet<Ontology> importedOntologies = new HashSet<Ontology>(new DotNetRdfExtensions.OntologyComparer());
+        private static readonly HashSet<Ontology> importedOntologies = new HashSet<Ontology>(new OntologyComparer());
 
         // Various configuration fields
         private static string _server;
@@ -63,7 +93,7 @@ namespace OWL2OAS
         /// <summary>
         /// A struct representing cardinality constraints on a property.
         /// </summary>
-        public struct PropertyConstraint
+        public struct PropertyCardinalityConstraint
         {
             public IUriNode property;
             public int min;
@@ -280,12 +310,12 @@ namespace OWL2OAS
                 schema.properties = new Dictionary<string, OASDocument.Property>();
 
                 // Iterate over superclasses, extract constraints
-                Dictionary<IUriNode, PropertyConstraint> constraints = new Dictionary<IUriNode, PropertyConstraint>();
+                Dictionary<IUriNode, PropertyCardinalityConstraint> constraints = new Dictionary<IUriNode, PropertyCardinalityConstraint>();
                 foreach (OntologyClass superClass in oClass.SuperClasses)
                 {
                     if (superClass.IsRestriction())
                     {
-                        PropertyConstraint? constraint = ExtractRestriction(superClass);
+                        PropertyCardinalityConstraint? constraint = ExtractCardinalityConstraint(superClass);
                         if (constraint.HasValue)
                         {
                             constraints.Add(constraint.Value.property, constraint.Value);
@@ -344,15 +374,18 @@ namespace OWL2OAS
                             // Fall back to string representation for unknown types
                             dataProperty.type = "string";
 
-                            // Parse XSD type into OAS type and format (note: not all XSD types are covered)
-                            string rangeXsdType = ((UriNode)property.Ranges.First().Resource).GetLocalName();
-                            if (xsdOsaMappings.ContainsKey(rangeXsdType))
-                            {
-                                dataProperty.type = xsdOsaMappings[rangeXsdType].Item1;
-                                string format = xsdOsaMappings[rangeXsdType].Item2;
-                                if (format.Length > 0)
+                            // If range is named, check if it is an XSD type that can be parsed into 
+                            // an OAS type and format (note: not all XSD types are covered)
+                            if (property.Ranges.First().IsNamed()) { 
+                                string rangeXsdType = ((UriNode)property.Ranges.First().Resource).GetLocalName();
+                                if (xsdOsaMappings.ContainsKey(rangeXsdType))
                                 {
-                                    dataProperty.format = format;
+                                    dataProperty.type = xsdOsaMappings[rangeXsdType].Item1;
+                                    string format = xsdOsaMappings[rangeXsdType].Item2;
+                                    if (format.Length > 0)
+                                    {
+                                        dataProperty.format = format;
+                                    }
                                 }
                             }
 
@@ -405,7 +438,7 @@ namespace OWL2OAS
                             // Assign constraints on the array, if any
                             if (constraints.ContainsKey(propertyNode))
                             {
-                                PropertyConstraint pc = constraints[propertyNode];
+                                PropertyCardinalityConstraint pc = constraints[propertyNode];
                                 if (pc.min != 0)
                                     arrayProperty.minItems = pc.min;
                                 if (pc.max != 0)
@@ -576,13 +609,16 @@ namespace OWL2OAS
                 string propertyType = "string";
                 string propertyFormat = "";
 
-                // Parse XSD type into OAS type and format (note: not all XSD types are covered)
-                string rangeXsdType = ((UriNode)property.Ranges.First().Resource).GetLocalName();
-                
-                if (xsdOsaMappings.ContainsKey(rangeXsdType))
+                // If range is named, check if it is an XSD type that can be parsed into 
+                // an OAS type and format (note: not all XSD types are covered)
+                if (property.Ranges.First().IsNamed())
                 {
-                    propertyType = xsdOsaMappings[rangeXsdType].Item1;
-                    propertyFormat = xsdOsaMappings[rangeXsdType].Item2;
+                    string rangeXsdType = ((UriNode)property.Ranges.First().Resource).GetLocalName();
+                    if (xsdOsaMappings.ContainsKey(rangeXsdType))
+                    {
+                        propertyType = xsdOsaMappings[rangeXsdType].Item1;
+                        propertyFormat = xsdOsaMappings[rangeXsdType].Item2;
+                    }
                 }
 
                 OASDocument.Parameter parameter = new OASDocument.Parameter
@@ -678,7 +714,7 @@ namespace OWL2OAS
             Console.WriteLine("");
         }
 
-        private static PropertyConstraint? ExtractRestriction(OntologyClass restriction)
+        private static PropertyCardinalityConstraint? ExtractCardinalityConstraint(OntologyClass restriction)
         {
             OntologyGraph graph = restriction.Graph as OntologyGraph;
             IUriNode onProperty = graph.CreateUriNode(VocabularyHelper.OWL.onProperty);
@@ -692,14 +728,16 @@ namespace OWL2OAS
 
             if (restriction.GetNodesViaProperty(onProperty).UriNodes().Count(node => node.IsOntologyProperty()) == 1)
             {
-                PropertyConstraint pc = new PropertyConstraint();
+                PropertyCardinalityConstraint pc = new PropertyCardinalityConstraint();
                 IUriNode restrictionPropertyNode = restriction.GetNodesViaProperty(onProperty).UriNodes().First(node => node.IsOntologyProperty());
                 pc.property = restrictionPropertyNode;
 
+                
                 IEnumerable<INode> exactCardinalities = restriction.GetNodesViaProperty(cardinality).Union(restriction.GetNodesViaProperty(qualifiedCardinality));
                 if (exactCardinalities.LiteralNodes().Count() == 1 &&
                     exactCardinalities.LiteralNodes().First().IsInteger())
                 {
+                    // Exact cardinality -> No need to process further, extract and return.
                     pc.exactly = int.Parse(exactCardinalities.LiteralNodes().First().Value);
                     return pc;
                 }
@@ -722,7 +760,17 @@ namespace OWL2OAS
                 {
                     pc.max = int.Parse(maxCardinalities.LiteralNodes().First().Value);
                 }
-                return pc;
+
+                // Only return the constraint if one of the above cardinality requirements were encountered.
+                // This avoids false positives from unsupported constraints such as owl:allValuesFrom and owl:hasValue.
+                if (pc.min != 0 || pc.max != 0 )
+                {
+                    return pc;
+                }
+                else
+                {
+                    return null;
+                }
             }
             return null;
         }
@@ -736,8 +784,6 @@ namespace OWL2OAS
         {
             // We only deal with named ontologies
             if (importedOntology.IsNamed()) {
-
-                Console.WriteLine("Resolving and importing " + importedOntology.GetIri().ToString());
 
                 // Parse and load ontology from the stated import URI
                 Uri importUri = importedOntology.GetIri();
