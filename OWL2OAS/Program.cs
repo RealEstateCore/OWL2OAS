@@ -309,6 +309,12 @@ namespace OWL2OAS
                 OASDocument.Schema schema = new OASDocument.Schema();
                 schema.properties = new Dictionary<string, OASDocument.Property>();
 
+                // Create patch schema (alternate schema for the PATCH operation)
+                OASDocument.Schema patchSchema = new OASDocument.Schema();
+                patchSchema.properties = new Dictionary<string, OASDocument.Property>();
+                patchSchema.minProperties = 2;
+                patchSchema.maxProperties = 2;
+
                 // Iterate over superclasses, extract cardinality constraints from OWL restrictions
                 // This dictionary maps properties to the found constraints
                 Dictionary<IUriNode, PropertyCardinalityConstraints> constraints = new Dictionary<IUriNode, PropertyCardinalityConstraints>();
@@ -355,6 +361,7 @@ namespace OWL2OAS
 
                 // Add reference to context schema
                 schema.properties.Add("@context", new OASDocument.SchemaReferenceProperty("Context"));
+                patchSchema.properties.Add("@context", new OASDocument.SchemaReferenceProperty("Context"));
 
                 // Add @id for all entries
                 OASDocument.Property idProperty = new OASDocument.Property();
@@ -369,10 +376,15 @@ namespace OWL2OAS
                 };
                 schema.properties.Add("@type", typeProperty);
 
+                // @context is mandatory
+                schema.required = new List<string>() { "@context" };
+                patchSchema.required = new List<string>() { "@context" };
+
                 // Label is an option for all entries
                 OASDocument.Property labelProperty = new OASDocument.Property();
                 labelProperty.type = "string";
                 schema.properties.Add("label", labelProperty);
+                patchSchema.properties.Add("label", labelProperty);
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
                 IEnumerable<OntologyProperty> allProperties = oClass.IsExhaustiveDomainOf();
@@ -477,11 +489,13 @@ namespace OWL2OAS
                                     arrayProperty.maxItems = arrayProperty.minItems = pc.exactly;
                             }
                             schema.properties.Add(propertyLabel, arrayProperty);
+                            patchSchema.properties.Add(propertyLabel, arrayProperty);
                         }
                         else
                         {
                             // This is a single-valued property, assign it w/o the array
                             schema.properties.Add(propertyLabel, outputProperty);
+                            patchSchema.properties.Add(propertyLabel, outputProperty);
                         }
 
                         // Tag any min 1 or exactly 1 properties as required
@@ -493,6 +507,7 @@ namespace OWL2OAS
                         }
                     }
                 }
+                document.components.schemas.Add(classLabel + "-PATCH", patchSchema);
                 document.components.schemas.Add(classLabel, schema);
             }
         }
@@ -514,6 +529,7 @@ namespace OWL2OAS
                 document.paths.Add(string.Format("/{0}/{{id}}", classLabel), new OASDocument.Path
                 {
                     get = GenerateGetEntityByIdOperation(classLabel),
+                    patch = GeneratePatchToIdOperation(classLabel),
                     put = GeneratePutToIdOperation(classLabel),
                     delete = GenerateDeleteByIdOperation(classLabel)
                 });
@@ -690,6 +706,51 @@ namespace OWL2OAS
             return getOperation;
         }
 
+        private static OASDocument.Operation GeneratePatchToIdOperation(string classLabel)
+        {
+            OASDocument.Operation patchOperation = new OASDocument.Operation();
+            patchOperation.summary = string.Format("Update a single property on a specific '{0}' object.", classLabel);
+            patchOperation.tags.Add(classLabel);
+
+            // Add the ID parameter
+            OASDocument.Parameter idParameter = new OASDocument.Parameter
+            {
+                name = "id",
+                description = string.Format("Id of '{0}' to update.", classLabel),
+                InField = OASDocument.Parameter.InFieldValues.path,
+                required = true,
+                schema = new Dictionary<string, string> {
+                            { "type", "string" }
+                        }
+            };
+            OASDocument.Parameter bodyParameter = new OASDocument.Parameter
+            {
+                name = "patch",
+                description = "A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.",
+                InField = OASDocument.Parameter.InFieldValues.header,
+                required = true,
+                schema = new Dictionary<string, string> {
+                            { "$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel + "-PATCH") }
+                        }
+            };
+            patchOperation.parameters.Add(idParameter);
+            patchOperation.parameters.Add(bodyParameter);
+
+            // Create each of the HTTP response types
+            OASDocument.Response response = new OASDocument.Response();
+            response.description = "Entity was updated successfully (new representation returned).";
+            patchOperation.responses.Add("200", response);
+
+            response.content = new Dictionary<string, OASDocument.Content>();
+            OASDocument.Content content = new OASDocument.Content();
+            response.content.Add("application/jsonld", content);
+
+            // Response is per previously defined schema
+            content.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+
+            return patchOperation;
+        }
+
         private static OASDocument.Operation GeneratePutToIdOperation(string classLabel)
         {
             OASDocument.Operation putOperation = new OASDocument.Operation();
@@ -738,7 +799,8 @@ namespace OWL2OAS
         private static void DumpAsYaml(object data)
         {
             var stringBuilder = new StringBuilder();
-            var serializer = new Serializer();
+            var serializerBuilder = new SerializerBuilder().DisableAliases();
+            var serializer = serializerBuilder.Build();
             stringBuilder.AppendLine(serializer.Serialize(data));
             Console.WriteLine(stringBuilder);
             Console.WriteLine("");

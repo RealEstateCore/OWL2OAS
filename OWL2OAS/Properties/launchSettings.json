@@ -2,7 +2,7 @@
   "profiles": {
     "OWL2OAS": {
       "commandName": "Project",
-      "commandLineArgs": "-u https://w3id.org/rec/full/"
+      "commandLineArgs": "-u https://w3id.org/rec/full/ > %HOMEPATH%/OWL2OAS_OUTPUT.yaml"
     }
   }
 }

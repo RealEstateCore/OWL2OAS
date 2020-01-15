@@ -131,6 +131,8 @@ namespace OWL2OAS
             public readonly string type = "object";
             public List<string> required;
             public Dictionary<string, Property> properties;
+            public int minProperties;
+            public int maxProperties;
         }
 
         public class ObjectProperty: Property
@@ -175,6 +177,7 @@ namespace OWL2OAS
         {
             public Operation get;
             public Operation put;
+            public Operation patch;
             public Operation post;
             public Operation delete;
         }
