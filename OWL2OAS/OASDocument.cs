@@ -123,7 +123,37 @@ namespace OWL2OAS
                     }
                 }
             };
-            public Dictionary<string, Schema> schemas;
+            public Dictionary<string, Schema> schemas = new Dictionary<string, Schema>
+            {
+                // Add the default query operator filter schemas
+                {"NumericFilter", new Schema {
+                    properties = new Dictionary<string, Property>
+                    {
+                        {"eq", new Property {type="integer"} },
+                        {"lt", new Property {type="integer"} },
+                        {"lte", new Property {type="integer"} },
+                        {"gt", new Property {type="integer"} },
+                        {"gte", new Property {type="integer"} }
+                    }
+                }},
+                {"StringFilter", new Schema {
+                    properties = new Dictionary<string, Property>
+                    {
+                        {"contains", new Property {type="string"} },
+                        {"regex", new Property {type="string"} }
+                    }
+                }},
+                {"TimeIntervalFilter", new Schema {
+                    properties = new Dictionary<string, Property>
+                    {
+                        {"starting", new Property {type="string", format="date-time"} },
+                        {"ending", new Property {type="string", format="date-time"} },
+                        {"before", new Property {type="string", format="date-time"} },
+                        {"after", new Property {type="string", format="date-time"} },
+                        {"latest", new Property {type="boolean" } }
+                    }
+                }}
+            };
         }
         
         public class Schema

@@ -173,7 +173,6 @@ namespace OWL2OAS
 
             // Set up components/schemas structure.
             document.components = new OASDocument.Components();
-            document.components.schemas = new Dictionary<string, OASDocument.Schema>();
 
             // Generate and add the Context schema
             document.components.schemas.Add("Context", GenerateContextSchema());
