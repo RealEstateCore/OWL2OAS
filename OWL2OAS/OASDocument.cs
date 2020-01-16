@@ -87,6 +87,7 @@ namespace OWL2OAS
             public string description;
             public bool required;
             public Dictionary<string, string> schema;
+            public string style;
         }
 
         public class Components
@@ -120,6 +121,19 @@ namespace OWL2OAS
                             { "maximum", "100" },
                             { "default", "20" }
                         }
+                    }
+                },
+                {
+                    "sortParam", new Parameter
+                    {
+                        name = "sort",
+                        description = "The field and direction to sort results on.",
+                        InField = Parameter.InFieldValues.query,
+                        required = false,
+                        schema = new Dictionary<string, string> {
+                            { "$ref", "#/components/schemas/SortingSchema" }
+                        },
+                        style = "deepObject"
                     }
                 }
             };
@@ -163,6 +177,14 @@ namespace OWL2OAS
                         {"before", new Property {type="string", format="date-time"} },
                         {"after", new Property {type="string", format="date-time"} },
                         {"latest", new Property {type="boolean" } }
+                    }
+                }},
+                // And the sort operators schema
+                {"SortingSchema", new Schema {
+                    properties = new Dictionary<string, Property>
+                    {
+                        {"asc", new Property {type="string"} },
+                        {"desc", new Property {type="string"} }
                     }
                 }}
             };

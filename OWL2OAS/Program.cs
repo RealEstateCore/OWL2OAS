@@ -641,6 +641,9 @@ namespace OWL2OAS
             getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "offsetParam" });
             getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "limitParam" });
 
+            // Add sort param
+            getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "sortParam" });
+
             // Add parameters for each property field that can be expressed on this class
             foreach (OntologyProperty property in oClass.IsExhaustiveDomainOf()
             .Where(property => property.IsDataProperty() || property.IsObjectProperty())
@@ -724,6 +727,11 @@ namespace OWL2OAS
                     schema = propertySchema,
                     InField = OASDocument.Parameter.InFieldValues.query
                 };
+
+                if (filterSchema.Length > 0)
+                {
+                    parameter.style = "deepObject";
+                }
 
                 getOperation.parameters.Add(parameter);
             }
