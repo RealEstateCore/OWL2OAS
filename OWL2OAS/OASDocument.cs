@@ -126,7 +126,7 @@ namespace OWL2OAS
             public Dictionary<string, Schema> schemas = new Dictionary<string, Schema>
             {
                 // Add the default query operator filter schemas
-                {"NumericFilter", new Schema {
+                {"IntegerFilter", new Schema {
                     properties = new Dictionary<string, Property>
                     {
                         {"eq", new Property {type="integer"} },
@@ -136,16 +136,28 @@ namespace OWL2OAS
                         {"gte", new Property {type="integer"} }
                     }
                 }},
+                {"NumberFilter", new Schema {
+                    properties = new Dictionary<string, Property>
+                    {
+                        {"eq", new Property {type="number"} },
+                        {"lt", new Property {type="number"} },
+                        {"lte", new Property {type="number"} },
+                        {"gt", new Property {type="number"} },
+                        {"gte", new Property {type="number"} }
+                    }
+                }},
                 {"StringFilter", new Schema {
                     properties = new Dictionary<string, Property>
                     {
+                        {"eq", new Property {type="string"} },
                         {"contains", new Property {type="string"} },
                         {"regex", new Property {type="string"} }
                     }
                 }},
-                {"TimeIntervalFilter", new Schema {
+                {"DateTimeFilter", new Schema {
                     properties = new Dictionary<string, Property>
                     {
+                        {"eq", new Property {type="string", format="date-time"} },
                         {"starting", new Property {type="string", format="date-time"} },
                         {"ending", new Property {type="string", format="date-time"} },
                         {"before", new Property {type="string", format="date-time"} },

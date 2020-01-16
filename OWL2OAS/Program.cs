@@ -641,11 +641,11 @@ namespace OWL2OAS
             getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "offsetParam" });
             getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "limitParam" });
 
-            // Add parameters for each field that can be expressed on this class
+            // Add parameters for each property field that can be expressed on this class
             foreach (OntologyProperty property in oClass.IsExhaustiveDomainOf()
-                .Where(property => property.IsDataProperty() || property.IsObjectProperty())
-                .Where(property => property.Ranges.Count() == 1)
-                .Where(property => !property.IsDeprecated()))
+            .Where(property => property.IsDataProperty() || property.IsObjectProperty())
+            .Where(property => property.Ranges.Count() == 1)
+            .Where(property => !property.IsDeprecated()))
             {
                 string propertyLabel = GetKeyNameForResource(property.OntologyGraph(), property);
 
@@ -666,22 +666,64 @@ namespace OWL2OAS
                     }
                 }
 
+                // Select a filter schema to use for parameter formats where it is applicable
+                string filterSchema = "";
+                switch (propertyType)
+                {
+                    case "string":
+                        switch (propertyFormat)
+                        {
+                            case "date-time":
+                                filterSchema = "DateTimeFilter";
+                                break;
+
+                            default:
+                                filterSchema = "StringFilter";
+                                break;
+                        }
+                        break;
+
+                    case "integer":
+                        filterSchema = "IntegerFilter";
+                        break;
+
+                    case "number":
+                        filterSchema = "NumberFilter";
+                        break;
+                }
+
+                // Base the property schema on the filter, if one was selected above
+                // Otherwise, just do a simple type-based schema, possibly with format if one was found
+                Dictionary<string, string> propertySchema;
+                if (filterSchema.Length > 0)
+                {
+                    string filterSchemaReference = string.Format("#/components/schemas/{0}", filterSchema);
+                    propertySchema = new Dictionary<string, string>
+                    {
+                        { "$ref", filterSchemaReference }
+                    };
+                }
+                else
+                {
+                    propertySchema = new Dictionary<string, string>
+                    {
+                        { "type", propertyType }
+                    };
+
+                    if (propertyFormat.Length > 0)
+                    {
+                        propertySchema.Add("format", propertyFormat);
+                    }
+                }
+
                 OASDocument.Parameter parameter = new OASDocument.Parameter
                 {
                     name = propertyLabel,
                     description = string.Format("Filter value on property '{0}'.", propertyLabel),
                     required = false,
-                    schema = new Dictionary<string, string>
-                    {
-                        { "type", propertyType }
-                    },
+                    schema = propertySchema,
                     InField = OASDocument.Parameter.InFieldValues.query
                 };
-
-                if (propertyFormat.Length > 0)
-                {
-                    parameter.schema.Add("format", propertyFormat);
-                }
 
                 getOperation.parameters.Add(parameter);
             }
