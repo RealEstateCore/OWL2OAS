@@ -65,6 +65,8 @@ namespace OWL2OAS
         /// </summary>
         private static readonly HashSet<Ontology> importedOntologies = new HashSet<Ontology>(new OntologyComparer());
 
+        private static Dictionary<string, HashSet<string>> requiredPropertiesForEachClass = new Dictionary<string, HashSet<string>>();
+
         // Various configuration fields
         private static string _server;
         private static bool _noImports;
@@ -178,13 +180,13 @@ namespace OWL2OAS
             document.components.schemas.Add("Context", GenerateContextSchema());
 
             // Parse OWL classes.For each class, create a schema and a path
-            GenerateClassSchemas(rootOntologyGraph, document);
+            GenerateAtomicClassSchemas(rootOntologyGraph, document);
             GenerateClassPaths(rootOntologyGraph, document);
 
             // Also parse classes in imports
             foreach (Ontology importedOntology in importedOntologies)
             {
-                GenerateClassSchemas(importedOntology.Graph as OntologyGraph, document);
+                GenerateAtomicClassSchemas(importedOntology.Graph as OntologyGraph, document);
                 GenerateClassPaths(importedOntology.Graph as OntologyGraph, document);
             }
 
@@ -194,45 +196,45 @@ namespace OWL2OAS
         private static OASDocument.Schema GenerateContextSchema()
         {
             // Set @context/@vocab based on the ontology IRI
-            OASDocument.Property vocabularyProperty = new OASDocument.Property
+            OASDocument.PrimitiveSchema vocabularySchema = new OASDocument.PrimitiveSchema
             {
                 type = "string",
                 format = "uri",
                 DefaultValue = rootOntology.GetVersionOrOntologyIri().ToString()
             };
             // Set @context/@base (default data namespace)
-            OASDocument.Property baseNamespaceProperty = new OASDocument.Property
+            OASDocument.PrimitiveSchema baseNamespaceSchema = new OASDocument.PrimitiveSchema
             {
                 type = "string",
                 format = "uri"
             };
             // Hardcoded rdfs:label for @context
-            OASDocument.Property labelContextProperty = new OASDocument.Property
+            OASDocument.PrimitiveSchema labelContextSchema = new OASDocument.PrimitiveSchema
             {
                 type = "string",
                 format = "uri",
                 DefaultValue = VocabularyHelper.RDFS.label.ToString()
             };
             // Mash it all together into a @context block
-            OASDocument.Schema contextSchema = new OASDocument.Schema
+            OASDocument.ComplexSchema contextSchema = new OASDocument.ComplexSchema
             {
                 required = new List<string> { "@vocab", "@base", "label" },
-                properties = new Dictionary<string, OASDocument.Property> {
-                    { "@vocab", vocabularyProperty },
-                    { "@base", baseNamespaceProperty },
-                    { "label", labelContextProperty }
+                properties = new Dictionary<string, OASDocument.Schema> {
+                    { "@vocab", vocabularySchema },
+                    { "@base", baseNamespaceSchema },
+                    { "label", labelContextSchema }
                 }
             };
             // Add each imported ontology to the @context
             foreach (Ontology importedOntology in importedOntologies)
             {
-                OASDocument.Property importedVocabularyProperty = new OASDocument.Property
+                OASDocument.PrimitiveSchema importedVocabularySchema = new OASDocument.PrimitiveSchema
                 {
                     type = "string",
                     format = "uri",
                     DefaultValue = importedOntology.GetVersionOrOntologyIri().ToString()
                 };
-                contextSchema.properties.Add(importedOntology.GetShortName(), importedVocabularyProperty);
+                contextSchema.properties.Add(importedOntology.GetShortName(), importedVocabularySchema);
                 contextSchema.required.Add(importedOntology.GetShortName());
             }
 
@@ -296,7 +298,7 @@ namespace OWL2OAS
             return string.Format("{0}:{1}", prefix, localName);
         }
 
-        private static void GenerateClassSchemas(OntologyGraph graph, OASDocument document)
+        private static void GenerateAtomicClassSchemas(OntologyGraph graph, OASDocument document)
         {
             // Iterate over all classes
             foreach (OntologyClass oClass in graph.OwlClasses.Where(oClass => oClass.IsNamed() && !oClass.IsDeprecated()))
@@ -305,14 +307,11 @@ namespace OWL2OAS
                 string classLabel = GetKeyNameForResource(graph, oClass);
 
                 // Create schema for class and corresponding properties dict
-                OASDocument.Schema schema = new OASDocument.Schema();
-                schema.properties = new Dictionary<string, OASDocument.Property>();
+                OASDocument.ComplexSchema schema = new OASDocument.ComplexSchema();
+                schema.properties = new Dictionary<string, OASDocument.Schema>();
 
-                // Create patch schema (alternate schema for the PATCH operation)
-                OASDocument.Schema patchSchema = new OASDocument.Schema();
-                patchSchema.properties = new Dictionary<string, OASDocument.Property>();
-                patchSchema.minProperties = 2;
-                patchSchema.maxProperties = 2;
+                // Set up the required properties set, used in subsequently generating HTTP operations
+                requiredPropertiesForEachClass.Add(classLabel, new HashSet<string>());
 
                 // Iterate over superclasses, extract cardinality constraints from OWL restrictions
                 // This dictionary maps properties to the found constraints
@@ -359,31 +358,28 @@ namespace OWL2OAS
                 }
 
                 // Add reference to context schema
-                schema.properties.Add("@context", new OASDocument.SchemaReferenceProperty("Context"));
-                patchSchema.properties.Add("@context", new OASDocument.SchemaReferenceProperty("Context"));
+                schema.properties.Add("@context", new OASDocument.ReferenceSchema("Context"));
 
                 // Add @id for all entries
-                OASDocument.Property idProperty = new OASDocument.Property();
-                idProperty.type = "string";
-                schema.properties.Add("@id", idProperty);
+                OASDocument.PrimitiveSchema idSchema = new OASDocument.PrimitiveSchema();
+                idSchema.type = "string";
+                schema.properties.Add("@id", idSchema);
 
                 // Add @type for all entries
-                OASDocument.Property typeProperty = new OASDocument.Property
+                OASDocument.PrimitiveSchema typeSchema = new OASDocument.PrimitiveSchema
                 {
                     type = "string",
                     DefaultValue = oClass.GetLocalName()
                 };
-                schema.properties.Add("@type", typeProperty);
+                schema.properties.Add("@type", typeSchema);
 
                 // @context is mandatory
                 schema.required = new List<string>() { "@context" };
-                patchSchema.required = new List<string>() { "@context" };
 
                 // Label is an option for all entries
-                OASDocument.Property labelProperty = new OASDocument.Property();
-                labelProperty.type = "string";
-                schema.properties.Add("label", labelProperty);
-                patchSchema.properties.Add("label", labelProperty);
+                OASDocument.PrimitiveSchema labelSchema = new OASDocument.PrimitiveSchema();
+                labelSchema.type = "string";
+                schema.properties.Add("label", labelSchema);
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
                 IEnumerable<OntologyProperty> allProperties = oClass.IsExhaustiveDomainOf();
@@ -399,7 +395,7 @@ namespace OWL2OAS
                         string propertyLabel = GetKeyNameForResource(graph, property);
 
                         // The return value: a property block to be added to the output document
-                        OASDocument.Property outputProperty;
+                        OASDocument.Schema outputSchema;
 
                         // Check if multiple values are allowed for this property. By default they are.
                         bool propertyAllowsMultipleValues = true
@@ -410,10 +406,10 @@ namespace OWL2OAS
                         if (property.IsDataProperty())
                         {
                             // Set up the (possibly later on nested) property block
-                            OASDocument.Property dataProperty = new OASDocument.Property();
+                            OASDocument.PrimitiveSchema dataPropertySchema = new OASDocument.PrimitiveSchema();
 
                             // Fall back to string representation for unknown types
-                            dataProperty.type = "string";
+                            dataPropertySchema.type = "string";
 
                             // If range is named, check if it is an XSD type that can be parsed into 
                             // an OAS type and format (note: not all XSD types are covered)
@@ -421,42 +417,42 @@ namespace OWL2OAS
                                 string rangeXsdType = ((UriNode)property.Ranges.First().Resource).GetLocalName();
                                 if (xsdOsaMappings.ContainsKey(rangeXsdType))
                                 {
-                                    dataProperty.type = xsdOsaMappings[rangeXsdType].Item1;
+                                    dataPropertySchema.type = xsdOsaMappings[rangeXsdType].Item1;
                                     string format = xsdOsaMappings[rangeXsdType].Item2;
                                     if (format.Length > 0)
                                     {
-                                        dataProperty.format = format;
+                                        dataPropertySchema.format = format;
                                     }
                                 }
                             }
 
                             // Assign return value
-                            outputProperty = dataProperty;
+                            outputSchema = dataPropertySchema;
                         }
                         else
                         {
                             // This is an Object property
                             // Set up the (possibly later on nested) property block
-                            OASDocument.Property uriProperty;
+                            OASDocument.Schema uriPropertySchema;
 
                             // Set the type of the property; locally defined named classes can be either URI or full schema representation
                             OntologyClass range = property.Ranges.First();
                             if (range.IsNamed() && graph.OwlClasses.Contains(range))
                             {
-                                OASDocument.Property nestedIdProperty = new OASDocument.Property
+                                OASDocument.PrimitiveSchema nestedIdSchema = new OASDocument.PrimitiveSchema
                                 {
                                     type = "string"
                                 };
-                                OASDocument.Property nestedTypeProperty = new OASDocument.Property
+                                OASDocument.PrimitiveSchema nestedTypeSchema = new OASDocument.PrimitiveSchema
                                 {
                                     type = "string",
                                     DefaultValue = range.GetLocalName()
                                 };
-                                uriProperty = new OASDocument.ObjectProperty
+                                uriPropertySchema = new OASDocument.ComplexSchema
                                 {
-                                    properties = new Dictionary<string, OASDocument.Property> {
-                                        { "@id", nestedIdProperty },
-                                        { "@type", nestedTypeProperty }
+                                    properties = new Dictionary<string, OASDocument.Schema> {
+                                        { "@id", nestedIdSchema },
+                                        { "@type", nestedTypeSchema }
                                     },
                                     required = new List<string> { "@id" }
                                 };
@@ -464,49 +460,46 @@ namespace OWL2OAS
                             else
                             {
                                 // Fall back to string representation
-                                uriProperty = new OASDocument.Property();
-                                uriProperty.type = "string";
+                                uriPropertySchema = new OASDocument.PrimitiveSchema
+                                {
+                                    type = "string"
+                                };
                             }
 
-                            outputProperty = uriProperty;
+                            outputSchema = uriPropertySchema;
                         }
 
                         // If this field allows multiple values (as is the default), wrap it in an array
                         if (propertyAllowsMultipleValues)
                         {
-                            OASDocument.ArrayProperty arrayProperty = new OASDocument.ArrayProperty();
-                            arrayProperty.items = outputProperty;
+                            OASDocument.ArraySchema propertyArraySchema = new OASDocument.ArraySchema();
+                            propertyArraySchema.items = outputSchema;
                             // Assign constraints on the array, if any
                             if (constraints.ContainsKey(propertyNode))
                             {
                                 PropertyCardinalityConstraints pc = constraints[propertyNode];
                                 if (pc.min != 0)
-                                    arrayProperty.minItems = pc.min;
+                                    propertyArraySchema.minItems = pc.min;
                                 if (pc.max != 0)
-                                    arrayProperty.maxItems = pc.max;
+                                    propertyArraySchema.maxItems = pc.max;
                                 if (pc.exactly != 0)
-                                    arrayProperty.maxItems = arrayProperty.minItems = pc.exactly;
+                                    propertyArraySchema.maxItems = propertyArraySchema.minItems = pc.exactly;
                             }
-                            schema.properties.Add(propertyLabel, arrayProperty);
-                            patchSchema.properties.Add(propertyLabel, arrayProperty);
+                            schema.properties.Add(propertyLabel, propertyArraySchema);
                         }
                         else
                         {
                             // This is a single-valued property, assign it w/o the array
-                            schema.properties.Add(propertyLabel, outputProperty);
-                            patchSchema.properties.Add(propertyLabel, outputProperty);
+                            schema.properties.Add(propertyLabel, outputSchema);
                         }
 
                         // Tag any min 1 or exactly 1 properties as required
                         if (constraints.ContainsKey(propertyNode) && constraints[propertyNode].IsRequired())
                         {
-                            if (schema.required == null)
-                                schema.required = new List<string>();
-                            schema.required.Add(propertyLabel);
+                            requiredPropertiesForEachClass[classLabel].Add(propertyLabel);
                         }
                     }
                 }
-                document.components.schemas.Add(classLabel + "-PATCH", patchSchema);
                 document.components.schemas.Add(classLabel, schema);
             }
         }
@@ -606,7 +599,7 @@ namespace OWL2OAS
             response201.content.Add("application/jsonld", content201);
 
             // Response is per previously defined schema
-            content201.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+            content201.schema = MergeAtomicSchemaWithRequiredProperties(classLabel);
 
             return postOperation;
         }
@@ -648,7 +641,7 @@ namespace OWL2OAS
             response200.content.Add("application/jsonld", content200);
 
             // Response is per previously defined schema
-            content200.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+            content200.schema = MergeAtomicSchemaWithRequiredProperties(classLabel);
 
             return getOperation;
         }
@@ -778,13 +771,35 @@ namespace OWL2OAS
             response200.content.Add("application/jsonld", content200);
 
             // Wrap responses in array
-            content200.Schema = new OASDocument.ArrayProperty
+            content200.schema = new OASDocument.ArraySchema
             {
-                items = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel))
+                items = MergeAtomicSchemaWithRequiredProperties(classLabel)
             };
 
             // Return
             return getOperation;
+        }
+
+        private static OASDocument.Schema MergeAtomicSchemaWithRequiredProperties(string classLabel)
+        {
+            OASDocument.Schema itemSchema;
+            if (requiredPropertiesForEachClass[classLabel].Count == 0)
+            {
+                itemSchema = new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel));
+            }
+            else
+            {
+                itemSchema = new OASDocument.AllOfSchema
+                {
+                    allOf = new OASDocument.Schema[] {
+                        new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel)),
+                        new OASDocument.ComplexSchema {
+                            required = requiredPropertiesForEachClass[classLabel].ToList()
+                        }
+                    }
+                };
+            }
+            return itemSchema;
         }
 
         private static OASDocument.Operation GeneratePatchToIdOperation(string classLabel)
@@ -811,7 +826,7 @@ namespace OWL2OAS
                 InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
                 schema = new Dictionary<string, string> {
-                            { "$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel + "-PATCH") }
+                            { "$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel) }
                         }
             };
             patchOperation.parameters.Add(idParameter);
@@ -839,7 +854,7 @@ namespace OWL2OAS
             response200.content.Add("application/jsonld", content200);
 
             // Response is per previously defined schema
-            content200.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+            content200.schema = MergeAtomicSchemaWithRequiredProperties(classLabel);
 
             return patchOperation;
         }
@@ -896,7 +911,7 @@ namespace OWL2OAS
             response200.content.Add("application/jsonld", content200);
 
             // Response is per previously defined schema
-            content200.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+            content200.schema = MergeAtomicSchemaWithRequiredProperties(classLabel);
 
             return putOperation;
         }

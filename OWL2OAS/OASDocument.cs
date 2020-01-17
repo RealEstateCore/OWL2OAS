@@ -29,7 +29,7 @@ namespace OWL2OAS
                                     {
                                         { "application/jsonld", new Content
                                             {
-                                                Schema = new SchemaReferenceProperty("Context")
+                                                schema = new ReferenceSchema("Context")
                                             }
                                         }
                                     }
@@ -140,51 +140,51 @@ namespace OWL2OAS
             public Dictionary<string, Schema> schemas = new Dictionary<string, Schema>
             {
                 // Add the default query operator filter schemas
-                {"IntegerFilter", new Schema {
-                    properties = new Dictionary<string, Property>
+                {"IntegerFilter", new ComplexSchema {
+                    properties = new Dictionary<string, Schema>
                     {
-                        {"eq", new Property {type="integer"} },
-                        {"lt", new Property {type="integer"} },
-                        {"lte", new Property {type="integer"} },
-                        {"gt", new Property {type="integer"} },
-                        {"gte", new Property {type="integer"} }
+                        {"eq", new PrimitiveSchema {type="integer"} },
+                        {"lt", new PrimitiveSchema {type="integer"} },
+                        {"lte", new PrimitiveSchema {type="integer"} },
+                        {"gt", new PrimitiveSchema {type="integer"} },
+                        {"gte", new PrimitiveSchema {type="integer"} }
                     }
                 }},
-                {"NumberFilter", new Schema {
-                    properties = new Dictionary<string, Property>
+                {"NumberFilter", new ComplexSchema {
+                    properties = new Dictionary<string, Schema>
                     {
-                        {"eq", new Property {type="number"} },
-                        {"lt", new Property {type="number"} },
-                        {"lte", new Property {type="number"} },
-                        {"gt", new Property {type="number"} },
-                        {"gte", new Property {type="number"} }
+                        {"eq", new PrimitiveSchema {type="number"} },
+                        {"lt", new PrimitiveSchema {type="number"} },
+                        {"lte", new PrimitiveSchema {type="number"} },
+                        {"gt", new PrimitiveSchema {type="number"} },
+                        {"gte", new PrimitiveSchema {type="number"} }
                     }
                 }},
-                {"StringFilter", new Schema {
-                    properties = new Dictionary<string, Property>
+                {"StringFilter", new ComplexSchema {
+                    properties = new Dictionary<string, Schema>
                     {
-                        {"eq", new Property {type="string"} },
-                        {"contains", new Property {type="string"} },
-                        {"regex", new Property {type="string"} }
+                        {"eq", new PrimitiveSchema {type="string"} },
+                        {"contains", new PrimitiveSchema {type="string"} },
+                        {"regex", new PrimitiveSchema {type="string"} }
                     }
                 }},
-                {"DateTimeFilter", new Schema {
-                    properties = new Dictionary<string, Property>
+                {"DateTimeFilter", new ComplexSchema {
+                    properties = new Dictionary<string, Schema>
                     {
-                        {"eq", new Property {type="string", format="date-time"} },
-                        {"starting", new Property {type="string", format="date-time"} },
-                        {"ending", new Property {type="string", format="date-time"} },
-                        {"before", new Property {type="string", format="date-time"} },
-                        {"after", new Property {type="string", format="date-time"} },
-                        {"latest", new Property {type="boolean" } }
+                        {"eq", new PrimitiveSchema {type="string", format="date-time"} },
+                        {"starting", new PrimitiveSchema {type="string", format="date-time"} },
+                        {"ending", new PrimitiveSchema {type="string", format="date-time"} },
+                        {"before", new PrimitiveSchema {type="string", format="date-time"} },
+                        {"after", new PrimitiveSchema {type="string", format="date-time"} },
+                        {"latest", new PrimitiveSchema {type="boolean" } }
                     }
                 }},
                 // And the sort operators schema
-                {"SortingSchema", new Schema {
-                    properties = new Dictionary<string, Property>
+                {"SortingSchema", new ComplexSchema {
+                    properties = new Dictionary<string, Schema>
                     {
-                        {"asc", new Property {type="string"} },
-                        {"desc", new Property {type="string"} }
+                        {"asc", new PrimitiveSchema {type="string"} },
+                        {"desc", new PrimitiveSchema {type="string"} }
                     }
                 }}
             };
@@ -192,29 +192,19 @@ namespace OWL2OAS
         
         public class Schema
         {
+
+        }
+
+        public class ComplexSchema: Schema
+        {
             public readonly string type = "object";
             public List<string> required;
-            public Dictionary<string, Property> properties;
+            public Dictionary<string, Schema> properties;
             public int minProperties;
             public int maxProperties;
         }
 
-        public class ObjectProperty: Property
-        {
-            public new readonly string type = "object";
-            public Dictionary<string, Property> properties;
-            public List<string> required;
-        }
-
-        public class ArrayProperty: Property
-        {
-            public new string type = "array";
-            public Property items;
-            public int maxItems;
-            public int minItems;
-        }
-
-        public class Property
+        public class PrimitiveSchema: Schema
         {
             public string type;
             public string format;
@@ -222,9 +212,9 @@ namespace OWL2OAS
             public string DefaultValue { get; set; }
         }
 
-        public class SchemaReferenceProperty : Property
+        public class ReferenceSchema: Schema
         {
-            public SchemaReferenceProperty(string referenceType)
+            public ReferenceSchema(string referenceType)
             {
                 Reference = "#/components/schemas/" + referenceType;
             }
@@ -232,9 +222,17 @@ namespace OWL2OAS
             public string Reference { get; set; }
         }
 
-        public class PropertyItems
+        public class AllOfSchema: Schema
         {
+            public Schema[] allOf;
+        }
 
+        public class ArraySchema: Schema
+        {
+            public readonly new string type = "array";
+            public Schema items;
+            public int maxItems;
+            public int minItems;
         }
 
         public class Path
@@ -262,8 +260,8 @@ namespace OWL2OAS
 
         public class Content
         {
-            [YamlMember(ScalarStyle = ScalarStyle.DoubleQuoted, Alias = "schema")]
-            public Property Schema { get; set; }
+            //[YamlMember(ScalarStyle = ScalarStyle.DoubleQuoted, Alias = "schema")]
+            public Schema schema;// { get; set; }
         }
     }
 }
