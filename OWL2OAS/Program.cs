@@ -555,9 +555,17 @@ namespace OWL2OAS
             deleteOperation.parameters.Add(idParameter);
 
             // Create each of the HTTP response types
-            OASDocument.Response response = new OASDocument.Response();
-            response.description = string.Format("'{0}' entity was successfully deleted.", classLabel);
-            deleteOperation.responses.Add("default", response);
+            OASDocument.Response response404 = new OASDocument.Response();
+            response404.description = string.Format("An object of type '{0}' with the specified ID was not found.", classLabel);
+            deleteOperation.responses.Add("404", response404);
+
+            OASDocument.Response response500 = new OASDocument.Response();
+            response500.description = "Internal Server Error";
+            deleteOperation.responses.Add("500", response500);
+
+            OASDocument.Response response200 = new OASDocument.Response();
+            response200.description = string.Format("'{0}' entity was successfully deleted.", classLabel);
+            deleteOperation.responses.Add("200", response200);
 
             return deleteOperation;
         }
@@ -581,16 +589,24 @@ namespace OWL2OAS
             postOperation.parameters.Add(bodyParameter);
 
             // Create each of the HTTP response types
-            OASDocument.Response response = new OASDocument.Response();
-            response.description = "Entity was successfully created (new representation returned).";
-            postOperation.responses.Add("200", response);
+            OASDocument.Response response500 = new OASDocument.Response();
+            response500.description = "Internal Server Error";
+            postOperation.responses.Add("500", response500);
 
-            response.content = new Dictionary<string, OASDocument.Content>();
-            OASDocument.Content content = new OASDocument.Content();
-            response.content.Add("application/jsonld", content);
+            OASDocument.Response response400 = new OASDocument.Response();
+            response400.description = "Bad Request";
+            postOperation.responses.Add("400", response400);
+
+            OASDocument.Response response201 = new OASDocument.Response();
+            response201.description = "Entity was successfully created (new representation returned).";
+            postOperation.responses.Add("201", response201);
+
+            response201.content = new Dictionary<string, OASDocument.Content>();
+            OASDocument.Content content201 = new OASDocument.Content();
+            response201.content.Add("application/jsonld", content201);
 
             // Response is per previously defined schema
-            content.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+            content201.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
 
             return postOperation;
         }
@@ -615,16 +631,24 @@ namespace OWL2OAS
             getOperation.parameters.Add(idParameter);
 
             // Create each of the HTTP response types
-            OASDocument.Response response = new OASDocument.Response();
-            response.description = string.Format("A '{0}' object.", classLabel);
-            getOperation.responses.Add("200", response);
+            OASDocument.Response response404 = new OASDocument.Response();
+            response404.description = string.Format("An object of type '{0}' with the specified ID was not found.", classLabel);
+            getOperation.responses.Add("404", response404);
 
-            response.content = new Dictionary<string, OASDocument.Content>();
-            OASDocument.Content content = new OASDocument.Content();
-            response.content.Add("application/jsonld", content);
+            OASDocument.Response response500 = new OASDocument.Response();
+            response500.description = "Internal Server Error";
+            getOperation.responses.Add("500", response500);
+
+            OASDocument.Response response200 = new OASDocument.Response();
+            response200.description = string.Format("A '{0}' object.", classLabel);
+            getOperation.responses.Add("200", response200);
+
+            response200.content = new Dictionary<string, OASDocument.Content>();
+            OASDocument.Content content200 = new OASDocument.Content();
+            response200.content.Add("application/jsonld", content200);
 
             // Response is per previously defined schema
-            content.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+            content200.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
 
             return getOperation;
         }
@@ -737,16 +761,24 @@ namespace OWL2OAS
             }
 
             // Create each of the HTTP response types
-            OASDocument.Response response = new OASDocument.Response();
-            response.description = "An array of '" + classLabel + "' objects.";
-            getOperation.responses.Add("200", response);
+            OASDocument.Response response400 = new OASDocument.Response();
+            response400.description = "Bad Request";
+            getOperation.responses.Add("400", response400);
 
-            response.content = new Dictionary<string, OASDocument.Content>();
-            OASDocument.Content content = new OASDocument.Content();
-            response.content.Add("application/jsonld", content);
+            OASDocument.Response response500 = new OASDocument.Response();
+            response500.description = "Internal Server Error";
+            getOperation.responses.Add("500", response500);
+
+            OASDocument.Response response200 = new OASDocument.Response();
+            response200.description = "An array of '" + classLabel + "' objects.";
+            getOperation.responses.Add("200", response200);
+
+            response200.content = new Dictionary<string, OASDocument.Content>();
+            OASDocument.Content content200 = new OASDocument.Content();
+            response200.content.Add("application/jsonld", content200);
 
             // Wrap responses in array
-            content.Schema = new OASDocument.ArrayProperty
+            content200.Schema = new OASDocument.ArrayProperty
             {
                 items = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel))
             };
@@ -786,16 +818,28 @@ namespace OWL2OAS
             patchOperation.parameters.Add(bodyParameter);
 
             // Create each of the HTTP response types
-            OASDocument.Response response = new OASDocument.Response();
-            response.description = "Entity was updated successfully (new representation returned).";
-            patchOperation.responses.Add("200", response);
+            OASDocument.Response response400 = new OASDocument.Response();
+            response400.description = "Bad Request";
+            patchOperation.responses.Add("400", response400);
 
-            response.content = new Dictionary<string, OASDocument.Content>();
-            OASDocument.Content content = new OASDocument.Content();
-            response.content.Add("application/jsonld", content);
+            OASDocument.Response response404 = new OASDocument.Response();
+            response404.description = string.Format("An object of type '{0}' with the specified ID was not found.", classLabel);
+            patchOperation.responses.Add("404", response404);
+
+            OASDocument.Response response500 = new OASDocument.Response();
+            response500.description = "Internal Server Error";
+            patchOperation.responses.Add("500", response500);
+
+            OASDocument.Response response200 = new OASDocument.Response();
+            response200.description = "Entity was updated successfully (new representation returned).";
+            patchOperation.responses.Add("200", response200);
+
+            response200.content = new Dictionary<string, OASDocument.Content>();
+            OASDocument.Content content200 = new OASDocument.Content();
+            response200.content.Add("application/jsonld", content200);
 
             // Response is per previously defined schema
-            content.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+            content200.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
 
             return patchOperation;
         }
@@ -831,16 +875,28 @@ namespace OWL2OAS
             putOperation.parameters.Add(bodyParameter);
 
             // Create each of the HTTP response types
-            OASDocument.Response response = new OASDocument.Response();
-            response.description = "Entity was updated successfully (new representation returned).";
-            putOperation.responses.Add("200", response);
+            OASDocument.Response response400 = new OASDocument.Response();
+            response400.description = "Bad Request";
+            putOperation.responses.Add("400", response400);
 
-            response.content = new Dictionary<string, OASDocument.Content>();
-            OASDocument.Content content = new OASDocument.Content();
-            response.content.Add("application/jsonld", content);
+            OASDocument.Response response404 = new OASDocument.Response();
+            response404.description = string.Format("An object of type '{0}' with the specified ID was not found.", classLabel);
+            putOperation.responses.Add("404", response404);
+
+            OASDocument.Response response500 = new OASDocument.Response();
+            response500.description = "Internal Server Error";
+            putOperation.responses.Add("500", response500);
+
+            OASDocument.Response response200 = new OASDocument.Response();
+            response200.description = "Entity was updated successfully (new representation returned).";
+            putOperation.responses.Add("200", response200);
+
+            response200.content = new Dictionary<string, OASDocument.Content>();
+            OASDocument.Content content200 = new OASDocument.Content();
+            response200.content.Add("application/jsonld", content200);
 
             // Response is per previously defined schema
-            content.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
+            content200.Schema = new OASDocument.SchemaReferenceProperty(HttpUtility.UrlEncode(classLabel));
 
             return putOperation;
         }
