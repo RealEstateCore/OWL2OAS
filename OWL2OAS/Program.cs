@@ -118,7 +118,7 @@ namespace OWL2OAS
         static void Main(string[] args)
         {
             Parser.Default.ParseArguments<Options>(args)
-                   .WithParsed<Options>(o =>
+                   .WithParsed(o =>
                    {
                        _noImports = o.NoImports;
                        _server = o.Server;
@@ -133,7 +133,7 @@ namespace OWL2OAS
                            _ontologyPath = o.UriPath;
                        }
                    })
-                   .WithNotParsed<Options>((errs) =>
+                   .WithNotParsed((errs) =>
                    {
                        Environment.Exit(1);
                    });
@@ -770,11 +770,28 @@ namespace OWL2OAS
             OASDocument.Content content200 = new OASDocument.Content();
             response200.content.Add("application/jsonld", content200);
 
-            // Wrap responses in array
-            content200.schema = new OASDocument.ArraySchema
+            // Generate schema with required fields propped on via allOf (if any required fields exist)
+            OASDocument.Schema classSchemaWithRequiredProperties = MergeAtomicSchemaWithRequiredProperties(classLabel);
+
+            // Generate wrapper Hydra schema (https://www.hydra-cg.com/spec/latest/core/)
+            OASDocument.ComplexSchema hydraSchema = new OASDocument.ComplexSchema
             {
-                items = MergeAtomicSchemaWithRequiredProperties(classLabel)
+                required = new List<string>
+                {
+                    "@context",
+                    "member"
+                },
+                properties = new Dictionary<string, OASDocument.Schema>
+                {
+                    {"@context", new OASDocument.ReferenceSchema("HydraContext") },
+                    {"member", new OASDocument.ArraySchema  {
+                        items = classSchemaWithRequiredProperties
+                    } }
+                }
             };
+
+            // Wrap responses in array
+            content200.schema = hydraSchema;
 
             // Return
             return getOperation;

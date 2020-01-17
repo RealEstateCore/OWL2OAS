@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace OWL2OAS
 {
-    public class VocabularyHelper
+    public static class VocabularyHelper
     {
         public static class DC
         {

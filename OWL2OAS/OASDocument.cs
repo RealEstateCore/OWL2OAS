@@ -200,8 +200,6 @@ namespace OWL2OAS
             public readonly string type = "object";
             public List<string> required;
             public Dictionary<string, Schema> properties;
-            public int minProperties;
-            public int maxProperties;
         }
 
         public class PrimitiveSchema: Schema
@@ -229,7 +227,7 @@ namespace OWL2OAS
 
         public class ArraySchema: Schema
         {
-            public readonly new string type = "array";
+            public readonly string type = "array";
             public Schema items;
             public int maxItems;
             public int minItems;
