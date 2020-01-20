@@ -137,6 +137,24 @@ namespace OWL2OAS
             };
             public Dictionary<string, Schema> schemas = new Dictionary<string, Schema>
             {
+                // Add Hydra Colletions wrapper schema
+                {"HydraCollectionWrapper",
+                    new ComplexSchema
+                    {
+                        required = new List<string>
+                        {
+                            "@context",
+                            "@type",
+                            "member"
+                        },
+                        properties = new Dictionary<string, OASDocument.Schema>
+                        {
+                            {"@context", new PrimitiveSchema { type="string", format = "uri", DefaultValue="http://www.w3.org/ns/hydra/context.jsonld"} },
+                            {"@type", new PrimitiveSchema { type="string", DefaultValue="Collection"} },
+                            {"totalItems", new PrimitiveSchema { type="integer" } },
+                        }
+                    }
+                },
                 // Add the default query operator filter schemas
                 {"IntegerFilter", new ComplexSchema {
                     properties = new Dictionary<string, Schema>

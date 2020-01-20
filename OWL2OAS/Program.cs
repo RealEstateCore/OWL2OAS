@@ -774,19 +774,20 @@ namespace OWL2OAS
             OASDocument.Schema classSchemaWithRequiredProperties = MergeAtomicSchemaWithRequiredProperties(classLabel);
 
             // Generate wrapper Hydra schema (https://www.hydra-cg.com/spec/latest/core/)
-            OASDocument.ComplexSchema hydraSchema = new OASDocument.ComplexSchema
+            OASDocument.Schema hydraSchema = new OASDocument.AllOfSchema
             {
-                required = new List<string>
+                allOf = new OASDocument.Schema[]
                 {
-                    "@context",
-                    "member"
-                },
-                properties = new Dictionary<string, OASDocument.Schema>
-                {
-                    {"@context", new OASDocument.ReferenceSchema("HydraContext") },
-                    {"member", new OASDocument.ArraySchema  {
-                        items = classSchemaWithRequiredProperties
-                    } }
+                    new OASDocument.ReferenceSchema("HydraCollectionWrapper"),
+                    new OASDocument.ComplexSchema
+                    {
+                        properties = new Dictionary<string, OASDocument.Schema>
+                        {
+                            {"member", new OASDocument.ArraySchema  {
+                                items = classSchemaWithRequiredProperties
+                            } }
+                        }
+                    }
                 }
             };
 
@@ -845,7 +846,7 @@ namespace OWL2OAS
                 schema = new OASDocument.AllOfSchema
                 {
                     allOf = new OASDocument.Schema[] {
-                        new OASDocument.ReferenceSchema(classLabel),
+                        new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel)),
                         new OASDocument.ComplexSchema {
                             required =  new List<string> { "@context" },
                             minProperties = 2,
