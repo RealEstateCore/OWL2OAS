@@ -110,14 +110,19 @@ namespace OWL2OAS
             return Path.GetFileName(node.Uri.AbsolutePath);
         }
 
-        public static string GetNamespaceName(this IUriNode node)
+        public static Uri GetNamespace(this IUriNode node)
         {
             if (node.Uri.Fragment.Length > 0)
             {
-                return node.Uri.GetLeftPart(UriPartial.Path);
+                return new Uri(node.Uri.GetLeftPart(UriPartial.Path) + "#");
             }
-            string link = node.Uri.GetLeftPart(UriPartial.Path);
-            return link.Substring(0, link.LastIndexOf("/", StringComparison.Ordinal) + 1);
+            string nodeUriPath = node.Uri.GetLeftPart(UriPartial.Path);
+            if (nodeUriPath.Count(x => x == '/') >= 3)
+            {
+                string nodeUriBase = nodeUriPath.Substring(0, nodeUriPath.LastIndexOf("/", StringComparison.Ordinal) + 1);
+                return new Uri(nodeUriBase);
+            }
+            throw new UriFormatException(string.Format("The Uri {0} doesn't contain a namespace/local name separator.", node.Uri));
         }
         #endregion
 
@@ -197,6 +202,11 @@ namespace OWL2OAS
         public static string GetLocalName(this OntologyResource ontResource)
         {
             return ontResource.GetUriNode().GetLocalName();
+        }
+
+        public static Uri GetNamespace(this OntologyResource ontResource)
+        {
+            return ontResource.GetUriNode().GetNamespace();
         }
 
         public static IEnumerable<INode> GetNodesViaProperty(this OntologyResource resource, INode property)

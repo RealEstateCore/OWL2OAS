@@ -10,36 +10,7 @@ namespace OWL2OAS
         public Info info;
         public Components components;
 
-        /// <summary>
-        /// Initialise the paths block. By default holds only an HTTP GET for the JSON-LD @context endpoint.
-        /// </summary>
-        public Dictionary<string, Path> paths = new Dictionary<string, Path>
-        {
-            { "/JsonLdContext", new Path
-                {
-                    get = new Operation
-                    {
-                        summary = "Get the JSON-LD @context for this API, i.e., the set of ontologies that were used to generate the API.",
-                        responses = new Dictionary<string, Response>
-                        {
-                            { "200", new Response
-                                {
-                                    description = "A JSON-LD @context declaration.",
-                                    content = new Dictionary<string, Content>
-                                    {
-                                        { "application/jsonld", new Content
-                                            {
-                                                schema = new ReferenceSchema("Context")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        };
+        public Dictionary<string, Path> paths;
         public List<Dictionary<string, string>> servers { get; set; }
 
         public class Info
@@ -228,6 +199,8 @@ namespace OWL2OAS
             public int maximum;
             [YamlMember(Alias = "default")]
             public string DefaultValue { get; set; }
+            [YamlMember(Alias = "enum")]
+            public string[] Enumeration { get; set; }
         }
 
         public class ReferenceSchema: Schema
@@ -278,8 +251,7 @@ namespace OWL2OAS
 
         public class Content
         {
-            //[YamlMember(ScalarStyle = ScalarStyle.DoubleQuoted, Alias = "schema")]
-            public Schema schema;// { get; set; }
+            public Schema schema;
         }
     }
 }

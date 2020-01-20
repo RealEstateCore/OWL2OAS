@@ -67,6 +67,8 @@ namespace OWL2OAS
 
         private static Dictionary<string, HashSet<string>> requiredPropertiesForEachClass = new Dictionary<string, HashSet<string>>();
 
+        private static Dictionary<Uri, string> namespacePrefixes = new Dictionary<Uri, string>();
+
         // Various configuration fields
         private static string _server;
         private static bool _noImports;
@@ -179,6 +181,12 @@ namespace OWL2OAS
             // Generate and add the Context schema
             document.components.schemas.Add("Context", GenerateContextSchema());
 
+            // Generate and add the Loaded Ontologies path
+            document.paths = new Dictionary<string, OASDocument.Path>
+            {
+                { "/LoadedOntologies", GenerateLoadedOntologiesPath() }
+            };
+
             // Parse OWL classes.For each class, create a schema and a path
             GenerateAtomicClassSchemas(rootOntologyGraph, document);
             GenerateClassPaths(rootOntologyGraph, document);
@@ -193,6 +201,63 @@ namespace OWL2OAS
             DumpAsYaml(document);
         }
 
+        private static OASDocument.Path GenerateLoadedOntologiesPath()
+        {
+            OASDocument.Path loadedOntologiesPath = new OASDocument.Path
+            {
+                get = new OASDocument.Operation
+                {
+                    summary = "Get the set of ontologies that were imported by the root ontology when the API was generated.",
+                    responses = new Dictionary<string, OASDocument.Response>
+                        {
+                            { "200", new OASDocument.Response
+                                {
+                                    description = "A list of ontologies used to generate this API. Note that while the prefix names used here correspond with the ones given in the JSON-LD @context for the supported data types, the prefix mapping in the API " +
+                                    "is based on the Ontology IRIs given in those @context blocks, which may differ from the values given here (which give priority to version IRIs).",
+                                    content = new Dictionary<string, OASDocument.Content>
+                                    {
+                                        { "application/json", new OASDocument.Content
+                                            {
+                                                schema = GenerateLoadedOntologiesSchema()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                }
+            };
+            return loadedOntologiesPath;
+        }
+
+        private static OASDocument.Schema GenerateLoadedOntologiesSchema()
+        {
+            OASDocument.ComplexSchema loadedOntologiesSchema = new OASDocument.ComplexSchema
+            {
+                properties = new Dictionary<string, OASDocument.Schema>(),
+                required = new List<string>()
+            };
+
+            // Add each imported ontology to the @context
+            int i = 1;
+            foreach (Ontology importedOntology in importedOntologies)
+            {
+                OASDocument.PrimitiveSchema importedOntologySchema = new OASDocument.PrimitiveSchema
+                {
+                    type = "string",
+                    format = "uri",
+                    Enumeration = new string[] { importedOntology.GetVersionOrOntologyIri().ToString() }
+                };
+
+                // Fetch shortname as generated at import load time
+                string ontologyShortname = namespacePrefixes[importedOntology.GetIri()];
+                loadedOntologiesSchema.properties.Add(ontologyShortname, importedOntologySchema);
+                loadedOntologiesSchema.required.Add(ontologyShortname);
+            }
+
+            return loadedOntologiesSchema;
+        }
+
         private static OASDocument.Schema GenerateContextSchema()
         {
             // Set @context/@vocab based on the ontology IRI
@@ -200,7 +265,7 @@ namespace OWL2OAS
             {
                 type = "string",
                 format = "uri",
-                DefaultValue = rootOntology.GetVersionOrOntologyIri().ToString()
+                DefaultValue = rootOntology.GetIri().ToString()
             };
             // Set @context/@base (default data namespace)
             OASDocument.PrimitiveSchema baseNamespaceSchema = new OASDocument.PrimitiveSchema
@@ -225,17 +290,19 @@ namespace OWL2OAS
                     { "label", labelContextSchema }
                 }
             };
-            // Add each imported ontology to the @context
-            foreach (Ontology importedOntology in importedOntologies)
+            // Add each prefix to the @context (sorting by shortname, e.g., dictionary value, for usability)
+            List<KeyValuePair<Uri,string>> prefixMappingsList = namespacePrefixes.ToList();
+            prefixMappingsList.Sort((pair1, pair2) => pair1.Value.CompareTo(pair2.Value));
+            foreach (KeyValuePair<Uri, string> prefixMapping in prefixMappingsList)
             {
                 OASDocument.PrimitiveSchema importedVocabularySchema = new OASDocument.PrimitiveSchema
                 {
                     type = "string",
                     format = "uri",
-                    DefaultValue = importedOntology.GetVersionOrOntologyIri().ToString()
+                    DefaultValue = prefixMapping.Key.ToString()
                 };
-                contextSchema.properties.Add(importedOntology.GetShortName(), importedVocabularySchema);
-                contextSchema.required.Add(importedOntology.GetShortName());
+                contextSchema.properties.Add(prefixMapping.Value, importedVocabularySchema);
+                contextSchema.required.Add(prefixMapping.Value);
             }
 
             return contextSchema;
@@ -369,7 +436,7 @@ namespace OWL2OAS
                 OASDocument.PrimitiveSchema typeSchema = new OASDocument.PrimitiveSchema
                 {
                     type = "string",
-                    DefaultValue = oClass.GetLocalName()
+                    DefaultValue = GetPrefixedOrFullName(oClass)
                 };
                 schema.properties.Add("@type", typeSchema);
 
@@ -437,29 +504,20 @@ namespace OWL2OAS
 
                             // Set the type of the property; locally defined named classes can be either URI or full schema representation
                             OntologyClass range = property.Ranges.First();
-                            if (range.IsNamed() && graph.OwlClasses.Contains(range))
+                            if (range.IsNamed())
                             {
-                                OASDocument.PrimitiveSchema nestedIdSchema = new OASDocument.PrimitiveSchema
-                                {
-                                    type = "string"
-                                };
-                                OASDocument.PrimitiveSchema nestedTypeSchema = new OASDocument.PrimitiveSchema
-                                {
-                                    type = "string",
-                                    DefaultValue = range.GetLocalName()
-                                };
                                 uriPropertySchema = new OASDocument.ComplexSchema
                                 {
                                     properties = new Dictionary<string, OASDocument.Schema> {
-                                        { "@id", nestedIdSchema },
-                                        { "@type", nestedTypeSchema }
+                                        { "@id", new OASDocument.PrimitiveSchema { type = "string" } },
+                                        { "@type", new OASDocument.PrimitiveSchema { type = "string", DefaultValue = GetPrefixedOrFullName(range) } }
                                     },
                                     required = new List<string> { "@id" }
                                 };
                             }
                             else
                             {
-                                // Fall back to string representation
+                                // Fall back to string representation (for more complex anoymous OWL constructs, e.g., intersections etc)
                                 uriPropertySchema = new OASDocument.PrimitiveSchema
                                 {
                                     type = "string"
@@ -502,6 +560,22 @@ namespace OWL2OAS
                 }
                 document.components.schemas.Add(classLabel, schema);
             }
+        }
+
+        private static string GetPrefixedOrFullName(OntologyResource resource)
+        {
+            if (!resource.IsNamed())
+            {
+                throw new RdfException(string.Format("Resource '{0}' is anonymous.", resource.ToString()));
+            }
+            // Fall back to full URI name, in case qname cannot be generated
+            string resourceName = resource.GetIri().ToString();
+            Uri resourceNamespace = resource.GetNamespace();
+            if (namespacePrefixes.ContainsKey(resourceNamespace))
+            {
+                resourceName = string.Format("{0}:{1}", namespacePrefixes[resourceNamespace], resource.GetLocalName());
+            }
+            return resourceName;
         }
 
         private static void GenerateClassPaths(OntologyGraph graph, OASDocument document)
@@ -1039,6 +1113,7 @@ namespace OWL2OAS
 
                 // Parse and load ontology from the stated import URI
                 Uri importUri = importedOntology.GetIri();
+
                 //Uri importedOntologyUri = ((IUriNode)importedOntology.Resource).Uri;
                 OntologyGraph fetchedOntologyGraph = new OntologyGraph();
 
@@ -1058,18 +1133,34 @@ namespace OWL2OAS
                 // this method's signature), due to .htaccess redirects, version URIs, etc.
                 Ontology importedOntologyFromFetchedGraph = fetchedOntologyGraph.GetOntology();
 
-                // Only proceed if we have not seen this fetched ontology before, otherwise we risk 
-                // unecessary fetches and computation, and possibly import loops.
-                // Note that importedOntologies uses a custom comparer from DotNetRdfExtensions, 
-                // since the Ontology class does not implement IComparable
-                if (!importedOntologies.Contains(importedOntologyFromFetchedGraph))
-                {
-                    // Add imported ontology to the global imports collection and traverse its 
-                    // import hierarchy transitively
-                    importedOntologies.Add(importedOntologyFromFetchedGraph);
-                    foreach (Ontology subImport in importedOntologyFromFetchedGraph.Imports)
+                // Only proceed if the retrieved ontology has an IRI
+                if (importedOntologyFromFetchedGraph.IsNamed())
+                { 
+                    // Only proceed if we have not seen this fetched ontology before, otherwise we risk 
+                    // unecessary fetches and computation, and possibly import loops.
+                    // Note that importedOntologies uses a custom comparer from DotNetRdfExtensions, 
+                    // since the Ontology class does not implement IComparable
+                    if (!importedOntologies.Contains(importedOntologyFromFetchedGraph))
                     {
-                        LoadImport(subImport);
+                        // Add the fetched ontology to the namespace prefix index
+                        // (tacking on _1, _2, etc. to the shortname if it exists since before, 
+                        // since we need all prefix names to be unique).
+                        string importedOntologyShortname = importedOntologyFromFetchedGraph.GetShortName();
+                        int i = 1;
+                        while (namespacePrefixes.ContainsValue(importedOntologyShortname))
+                        {
+                            importedOntologyShortname = importedOntologyShortname.Split('_')[0] + "_" + i;
+                            i++;
+                        }
+                        namespacePrefixes.Add(importedOntologyFromFetchedGraph.GetIri(), importedOntologyShortname);
+
+                        // Add imported ontology to the global imports collection and traverse its 
+                        // import hierarchy transitively
+                        importedOntologies.Add(importedOntologyFromFetchedGraph);
+                        foreach (Ontology subImport in importedOntologyFromFetchedGraph.Imports)
+                        {
+                            LoadImport(subImport);
+                        }
                     }
                 }
             }
