@@ -86,7 +86,7 @@ namespace OWL2OAS
             public InFieldValues InField { get; set; }
             public string description;
             public bool required;
-            public Dictionary<string, string> schema;
+            public Schema schema;
             public string style;
         }
 
@@ -99,11 +99,11 @@ namespace OWL2OAS
                         description = "Number of items to skip before returning the results.",
                         InField = Parameter.InFieldValues.query,
                         required = false,
-                        schema = new Dictionary<string, string> {
-                            { "type", "integer" },
-                            { "format", "int32" },
-                            { "minimum", "0" },
-                            { "default", "0" }
+                        schema = new PrimitiveSchema {
+                            type = "integer",
+                            format = "int32",
+                            minimum = 0,
+                            DefaultValue = "0"
                         }
                     }
                 },
@@ -114,12 +114,12 @@ namespace OWL2OAS
                         description = "Maximum number of items to return.",
                         InField = Parameter.InFieldValues.query,
                         required = false,
-                        schema = new Dictionary<string, string> {
-                            { "type", "integer" },
-                            { "format", "int32" },
-                            { "minimum", "1" },
-                            { "maximum", "100" },
-                            { "default", "20" }
+                        schema = new PrimitiveSchema {
+                            type = "integer",
+                            format = "int32",
+                            minimum = 0,
+                            maximum = 100,
+                            DefaultValue = "20"
                         }
                     }
                 },
@@ -130,9 +130,7 @@ namespace OWL2OAS
                         description = "The field and direction to sort results on.",
                         InField = Parameter.InFieldValues.query,
                         required = false,
-                        schema = new Dictionary<string, string> {
-                            { "$ref", "#/components/schemas/SortingSchema" }
-                        },
+                        schema = new ReferenceSchema("SortingSchema"),
                         style = "deepObject"
                     }
                 }
@@ -200,12 +198,16 @@ namespace OWL2OAS
             public readonly string type = "object";
             public List<string> required;
             public Dictionary<string, Schema> properties;
+            public int maxProperties;
+            public int minProperties;
         }
 
         public class PrimitiveSchema: Schema
         {
             public string type;
             public string format;
+            public int minimum;
+            public int maximum;
             [YamlMember(Alias = "default")]
             public string DefaultValue { get; set; }
         }

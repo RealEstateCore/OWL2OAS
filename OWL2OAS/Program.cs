@@ -541,9 +541,9 @@ namespace OWL2OAS
                 description = string.Format("Id of '{0}' to delete.", classLabel),
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
-                schema = new Dictionary<string, string> {
-                            { "type", "string" }
-                        }
+                schema = new OASDocument.PrimitiveSchema {
+                    type = "string"
+                }
             };
             deleteOperation.parameters.Add(idParameter);
 
@@ -575,9 +575,7 @@ namespace OWL2OAS
                 description = string.Format("New '{0}' entity that is to be added.", classLabel),
                 InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
-                schema = new Dictionary<string, string> {
-                            { "$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel) }
-                        }
+                schema = new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel))
             };
             postOperation.parameters.Add(bodyParameter);
 
@@ -617,9 +615,10 @@ namespace OWL2OAS
                 description = string.Format("Id of '{0}' to return.", classLabel),
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
-                schema = new Dictionary<string, string> {
-                            { "type", "string" }
-                        }
+                schema = new OASDocument.PrimitiveSchema
+                {
+                    type = "string"
+                }
             };
             getOperation.parameters.Add(idParameter);
 
@@ -714,25 +713,26 @@ namespace OWL2OAS
 
                 // Base the property schema on the filter, if one was selected above
                 // Otherwise, just do a simple type-based schema, possibly with format if one was found
-                Dictionary<string, string> propertySchema;
+                OASDocument.Schema propertySchema;
                 if (filterSchema.Length > 0)
                 {
-                    string filterSchemaReference = string.Format("#/components/schemas/{0}", filterSchema);
-                    propertySchema = new Dictionary<string, string>
-                    {
-                        { "$ref", filterSchemaReference }
-                    };
+                    propertySchema = new OASDocument.ReferenceSchema(filterSchema);
                 }
                 else
                 {
-                    propertySchema = new Dictionary<string, string>
-                    {
-                        { "type", propertyType }
-                    };
-
                     if (propertyFormat.Length > 0)
                     {
-                        propertySchema.Add("format", propertyFormat);
+                        propertySchema = new OASDocument.PrimitiveSchema
+                        {
+                            type = propertyType,
+                            format = propertyFormat
+                        };
+                    }
+                    else {
+                        propertySchema = new OASDocument.PrimitiveSchema
+                        {
+                            type = propertyType
+                        };
                     }
                 }
 
@@ -832,9 +832,9 @@ namespace OWL2OAS
                 description = string.Format("Id of '{0}' to update.", classLabel),
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
-                schema = new Dictionary<string, string> {
-                            { "type", "string" }
-                        }
+                schema = new OASDocument.PrimitiveSchema {
+                    type = "string"
+                }
             };
             OASDocument.Parameter bodyParameter = new OASDocument.Parameter
             {
@@ -842,9 +842,17 @@ namespace OWL2OAS
                 description = "A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.",
                 InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
-                schema = new Dictionary<string, string> {
-                            { "$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel) }
+                schema = new OASDocument.AllOfSchema
+                {
+                    allOf = new OASDocument.Schema[] {
+                        new OASDocument.ReferenceSchema(classLabel),
+                        new OASDocument.ComplexSchema {
+                            required =  new List<string> { "@context" },
+                            minProperties = 2,
+                            maxProperties = 2
                         }
+                    }
+                }
             };
             patchOperation.parameters.Add(idParameter);
             patchOperation.parameters.Add(bodyParameter);
@@ -889,9 +897,9 @@ namespace OWL2OAS
                 description = string.Format("Id of '{0}' to update.", classLabel),
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
-                schema = new Dictionary<string, string> {
-                            { "type", "string" }
-                        }
+                schema = new OASDocument.PrimitiveSchema {
+                    type = "string"
+                }
             };
             OASDocument.Parameter bodyParameter = new OASDocument.Parameter
             {
@@ -899,9 +907,7 @@ namespace OWL2OAS
                 description = string.Format("Updated data for '{0}' entity.", classLabel),
                 InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
-                schema = new Dictionary<string, string> {
-                            { "$ref", "#/components/schemas/" + HttpUtility.UrlEncode(classLabel) }
-                        }
+                schema = new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel))
             };
             putOperation.parameters.Add(idParameter);
             putOperation.parameters.Add(bodyParameter);
