@@ -11,7 +11,7 @@ namespace OWL2OAS
         public Components components;
 
         public Dictionary<string, Path> paths;
-        public List<Dictionary<string, string>> servers { get; set; }
+        public List<Dictionary<string, string>> servers;
 
         public class Info
         {
@@ -245,7 +245,7 @@ namespace OWL2OAS
 
         public class Response
         {
-            public string description { get; set; }
+            public string description;
             public Dictionary<string, Content> content;
         }
 

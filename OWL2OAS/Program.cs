@@ -67,9 +67,9 @@ namespace OWL2OAS
         /// </summary>
         private static readonly HashSet<Ontology> importedOntologies = new HashSet<Ontology>(new OntologyComparer());
 
-        private static Dictionary<string, HashSet<string>> requiredPropertiesForEachClass = new Dictionary<string, HashSet<string>>();
+        private static readonly Dictionary<string, HashSet<string>> requiredPropertiesForEachClass = new Dictionary<string, HashSet<string>>();
 
-        private static Dictionary<Uri, string> namespacePrefixes = new Dictionary<Uri, string>();
+        private static readonly Dictionary<Uri, string> namespacePrefixes = new Dictionary<Uri, string>();
 
         // Used in string handling etc
         private static readonly CultureInfo invariantCulture = CultureInfo.InvariantCulture;
@@ -171,26 +171,20 @@ namespace OWL2OAS
                 }
             }
 
-            // Create OAS object
-            OASDocument document = new OASDocument();
-
-            // Create the OAS Info header
-            document.info = GenerateDocumentInfo();
-
-            // Server block
-            document.servers = new List<Dictionary<string, string>> { new Dictionary<string, string> { { "url", _server } } };
-
-            // Set up components/schemas structure.
-            document.components = new OASDocument.Components();
+            // Create OAS object, create OAS info header, server block, (empty) components/schemas structure, and LoadedOntologies endpoint
+            OASDocument document = new OASDocument
+            {
+                info = GenerateDocumentInfo(),
+                servers = new List<Dictionary<string, string>> { new Dictionary<string, string> { { "url", _server } } },
+                components = new OASDocument.Components(),
+                paths = new Dictionary<string, OASDocument.Path>
+                {
+                    { "/LoadedOntologies", GenerateLoadedOntologiesPath() }
+                }
+            };
 
             // Generate and add the Context schema
             document.components.schemas.Add("Context", GenerateContextSchema());
-
-            // Generate and add the Loaded Ontologies path
-            document.paths = new Dictionary<string, OASDocument.Path>
-            {
-                { "/LoadedOntologies", GenerateLoadedOntologiesPath() }
-            };
 
             // Parse OWL classes.For each class, create a schema and a path
             GenerateAtomicClassSchemas(rootOntologyGraph, document);
@@ -772,16 +766,11 @@ namespace OWL2OAS
                 switch (propertyType)
                 {
                     case "string":
-                        switch (propertyFormat)
+                        filterSchema = propertyFormat switch
                         {
-                            case "date-time":
-                                filterSchema = "DateTimeFilter";
-                                break;
-
-                            default:
-                                filterSchema = "StringFilter";
-                                break;
-                        }
+                            "date-time" => "DateTimeFilter",
+                            _ => "StringFilter",
+                        };
                         break;
 
                     case "integer":
@@ -1171,6 +1160,9 @@ namespace OWL2OAS
                         }
                     }
                 }
+
+                // Dispose graph before returning
+                fetchedOntologyGraph.Dispose();
             }
         }
     }
