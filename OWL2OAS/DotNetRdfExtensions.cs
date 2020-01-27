@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -41,7 +40,6 @@ namespace OWL2OAS
         #region INode/ILiteralNode/IUriNode extensions
         public static bool IsLiteral(this INode node)
         {
-            Contract.Requires(node != null);
             return node.NodeType.Equals(NodeType.Literal);
         }
 

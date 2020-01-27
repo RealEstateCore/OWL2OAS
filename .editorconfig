@@ -2,3 +2,6 @@
 
 # IDE0017: Simplify object initialization
 dotnet_style_object_initializer = false:suggestion
+
+# CA1062: Do not validate 'this' parameter in extension methods
+dotnet_diagnostic.CA1062.exclude_extension_method_this_parameter = true

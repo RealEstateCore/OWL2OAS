@@ -103,7 +103,6 @@ namespace OWL2OAS
         /// </summary>
         public struct PropertyCardinalityConstraints
         {
-            public IUriNode property;
             public int min;
             public int max;
             public int exactly;
