@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using VDS.RDF;
@@ -14,6 +15,10 @@ namespace OWL2OAS
     /// </summary>
     public static class DotNetRdfExtensions
     {
+
+        // Used in string handling etc
+        private static readonly CultureInfo invariantCulture = CultureInfo.InvariantCulture;
+
         #region Shared
         /// <summary>
         /// Custom comparer for OntologyResource objects, that simply
@@ -49,19 +54,19 @@ namespace OWL2OAS
         {
             if (!node.IsUri())
             {
-                throw new RdfException(string.Format("Node {0} is not an URI node.", node));
+                throw new RdfException($"Node {node} is not an URI node.");
             }
             return node as IUriNode;
         }
 
         public static bool IsEnglish(this ILiteralNode node)
         {
-            return node.Language.Equals("en") || node.Language.StartsWith("en-", StringComparison.Ordinal);
+            return node.Language.Equals("en", StringComparison.Ordinal) || node.Language.StartsWith("en-", StringComparison.Ordinal);
         }
 
         public static bool HasLanguage(this ILiteralNode node)
         {
-            return (!node.Language.Equals(String.Empty));
+            return !string.IsNullOrEmpty(node.Language);
         }
 
         public static bool IsInteger(this ILiteralNode node)
@@ -122,7 +127,7 @@ namespace OWL2OAS
                 string nodeUriBase = nodeUriPath.Substring(0, nodeUriPath.LastIndexOf("/", StringComparison.Ordinal) + 1);
                 return new Uri(nodeUriBase);
             }
-            throw new UriFormatException(string.Format("The Uri {0} doesn't contain a namespace/local name separator.", node.Uri));
+            throw new UriFormatException($"The Uri {node.Uri} doesn't contain a namespace/local name separator.");
         }
         #endregion
 
@@ -175,7 +180,7 @@ namespace OWL2OAS
             {
                 return graphOntologies.First();
             }
-            throw new RdfException(string.Format("The graph {0} doesn't contain any owl:Ontology declarations.", graph));
+            throw new RdfException($"The graph {graph} doesn't contain any owl:Ontology declarations.");
         }
         #endregion
 
@@ -189,7 +194,7 @@ namespace OWL2OAS
         {
             if (!ontResource.IsNamed())
             {
-                throw new RdfException(string.Format("Ontology resource {0} does not have an IRI.", ontResource));
+                throw new RdfException($"Ontology resource {ontResource} does not have an IRI.");
             }
             return ontResource.Resource.AsUriNode();
         }
@@ -237,7 +242,7 @@ namespace OWL2OAS
         {
             if (!ontology.HasVersionIri())
             {
-                throw new RdfException(string.Format("Ontology {0} does not have an owl:versionIRI annotation", ontology));
+                throw new RdfException($"Ontology {ontology} does not have an owl:versionIRI annotation");
             }
 
             IUriNode versionIri = ontology.Graph.CreateUriNode(VocabularyHelper.OWL.versionIRI);
@@ -273,7 +278,7 @@ namespace OWL2OAS
             // (unlikely?) case that we are dealing w/ an anonymous ontology
             if (!ontology.IsNamed())
             {
-                return ontology.GetHashCode().ToString();
+                return ontology.GetHashCode().ToString(invariantCulture);
             }
 
             // This is a simple string handling thing
@@ -291,7 +296,7 @@ namespace OWL2OAS
 
             // If the string contains dots, treat them as file ending delimiter and get rid of them
             // one at a time
-            while (ontologyUriString.Contains('.'))
+            while (ontologyUriString.Contains('.', StringComparison.Ordinal))
             {
                 ontologyUriString = ontologyUriString.Substring(0, ontologyUriString.LastIndexOf('.'));
             }
@@ -321,7 +326,7 @@ namespace OWL2OAS
         {
             if (!oClass.HasRestrictionProperty())
             {
-                throw new RdfException(string.Format("Ontology class {0} does not have a restriction property.", oClass));
+                throw new RdfException($"Ontology class {oClass} does not have a restriction property.");
             }
             IUriNode onProperty = oClass.Graph.CreateUriNode(VocabularyHelper.OWL.onProperty);
             return oClass.GetNodesViaProperty(onProperty).UriNodes().First(node => node.IsOntologyProperty());
@@ -358,17 +363,17 @@ namespace OWL2OAS
         #region OntologyProperty extensions
         public static bool IsObjectProperty(this OntologyProperty property)
         {
-            return property.Types.UriNodes().Any(propertyType => propertyType.Uri.ToString().Equals(OntologyHelper.OwlObjectProperty));
+            return property.Types.UriNodes().Any(propertyType => propertyType.Uri.ToString().Equals(OntologyHelper.OwlObjectProperty, StringComparison.Ordinal));
         }
 
         public static bool IsDataProperty(this OntologyProperty property)
         {
-            return property.Types.UriNodes().Any(propertyType => propertyType.Uri.ToString().Equals(OntologyHelper.OwlDatatypeProperty));
+            return property.Types.UriNodes().Any(propertyType => propertyType.Uri.ToString().Equals(OntologyHelper.OwlDatatypeProperty, StringComparison.Ordinal));
         }
 
         public static bool IsAnnotationProperty(this OntologyProperty property)
         {
-            return property.Types.UriNodes().Any(propertyType => propertyType.Uri.ToString().Equals(OntologyHelper.OwlAnnotationProperty));
+            return property.Types.UriNodes().Any(propertyType => propertyType.Uri.ToString().Equals(OntologyHelper.OwlAnnotationProperty, StringComparison.Ordinal));
         }
 
         public static bool IsFunctional(this OntologyProperty property)
