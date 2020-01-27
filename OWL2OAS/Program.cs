@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Web;
 using CommandLine;
 using VDS.RDF;
@@ -143,6 +144,8 @@ namespace OWL2OAS
             // Clear cache from any prior runs
             UriLoader.Cache.Clear();
 
+            Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+
             // Load ontology graph from local or remote path
             OntologyGraph rootOntologyGraph = new OntologyGraph();
             if (_localOntology)
@@ -198,6 +201,9 @@ namespace OWL2OAS
                 GenerateClassPaths(importedOntology.Graph as OntologyGraph, document);
             }
 
+            // Dispose all open graphs
+            rootOntologyGraph.Dispose();
+
             DumpAsYaml(document);
         }
 
@@ -239,7 +245,6 @@ namespace OWL2OAS
             };
 
             // Add each imported ontology to the @context
-            int i = 1;
             foreach (Ontology importedOntology in importedOntologies)
             {
                 OASDocument.PrimitiveSchema importedOntologySchema = new OASDocument.PrimitiveSchema
@@ -292,7 +297,7 @@ namespace OWL2OAS
             };
             // Add each prefix to the @context (sorting by shortname, e.g., dictionary value, for usability)
             List<KeyValuePair<Uri,string>> prefixMappingsList = namespacePrefixes.ToList();
-            prefixMappingsList.Sort((pair1, pair2) => pair1.Value.CompareTo(pair2.Value));
+            prefixMappingsList.Sort((pair1, pair2) => string.CompareOrdinal(pair1.Value, pair2.Value));
             foreach (KeyValuePair<Uri, string> prefixMapping in prefixMappingsList)
             {
                 OASDocument.PrimitiveSchema importedVocabularySchema = new OASDocument.PrimitiveSchema
@@ -318,16 +323,16 @@ namespace OWL2OAS
             IUriNode dcTitle = rootOntologyGraph.CreateUriNode(VocabularyHelper.DC.title);
             if (!rootOntology.GetNodesViaProperty(dcTitle).LiteralNodes().Any())
             {
-                throw new RdfException(string.Format("Ontology <{0}> does not have an <dc:title> annotation.", rootOntology));
+                throw new RdfException($"Ontology <{rootOntology}> does not have an <dc:title> annotation.");
             }
             if (!rootOntology.VersionInfo.Any())
             {
-                throw new RdfException(string.Format("Ontology <{0}> does not have an <owl:versionInfo> annotation.", rootOntology));
+                throw new RdfException($"Ontology <{rootOntology}> does not have an <owl:versionInfo> annotation.");
             }
             IUriNode ccLicense = rootOntologyGraph.CreateUriNode(VocabularyHelper.CC.license);
             if (!rootOntology.GetNodesViaProperty(ccLicense).Any(objNode => objNode.IsLiteral() || objNode.IsUri()))
             {
-                throw new RdfException(string.Format("Ontology <{0}> does not have an <cc:license> annotation that is a URI or literal.", rootOntology));
+                throw new RdfException($"Ontology <{rootOntology}> does not have an <cc:license> annotation that is a URI or literal.");
             }
             docInfo.title = rootOntology.GetNodesViaProperty(dcTitle).LiteralNodes().OrderBy(title => title.HasLanguage()).First().Value;
             docInfo.Version = rootOntology.VersionInfo.OrderBy(versionInfo => versionInfo.HasLanguage()).First().Value;
@@ -348,7 +353,7 @@ namespace OWL2OAS
             if (rootOntology.GetNodesViaProperty(dcDescription).LiteralNodes().Any())
             {
                 string ontologyDescription = rootOntology.GetNodesViaProperty(dcDescription).LiteralNodes().OrderBy(description => description.HasLanguage()).First().Value.Trim().Replace("\r\n", "\n").Replace("\n", "<br/>");
-                docInfo.description = string.Format("The documentation below is automatically extracted from a <dc:description> annotation on the ontology {0}:<br/><br/>*{1}*", rootOntology, ontologyDescription);
+                docInfo.description = $"The documentation below is automatically extracted from a <dc:description> annotation on the ontology {rootOntology}:<br/><br/>*{ontologyDescription}*";
             }
 
             return docInfo;
@@ -362,7 +367,7 @@ namespace OWL2OAS
             }
             string prefix = importedOntologies.First(ontology => ontology.Graph.Equals(graph)).GetShortName();
             string localName = cls.GetLocalName();
-            return string.Format("{0}:{1}", prefix, localName);
+            return $"{prefix}:{localName}";
         }
 
         private static void GenerateAtomicClassSchemas(OntologyGraph graph, OASDocument document)
@@ -566,14 +571,14 @@ namespace OWL2OAS
         {
             if (!resource.IsNamed())
             {
-                throw new RdfException(string.Format("Resource '{0}' is anonymous.", resource.ToString()));
+                throw new RdfException($"Resource '{resource.ToString()}' is anonymous.");
             }
             // Fall back to full URI name, in case qname cannot be generated
             string resourceName = resource.GetIri().ToString();
             Uri resourceNamespace = resource.GetNamespace();
             if (namespacePrefixes.ContainsKey(resourceNamespace))
             {
-                resourceName = string.Format("{0}:{1}", namespacePrefixes[resourceNamespace], resource.GetLocalName());
+                resourceName = $"{namespacePrefixes[resourceNamespace]}:{resource.GetLocalName()}";
             }
             return resourceName;
         }
@@ -587,12 +592,12 @@ namespace OWL2OAS
                 string classLabel = GetKeyNameForResource(graph, oClass);
 
                 // Create paths and corresponding operations for class
-                document.paths.Add(string.Format("/{0}", classLabel), new OASDocument.Path
+                document.paths.Add($"/{classLabel}", new OASDocument.Path
                 {
                     get = GenerateGetEntitiesOperation(classLabel, oClass),
                     post = GeneratePostEntityOperation(classLabel)
                 });
-                document.paths.Add(string.Format("/{0}/{{id}}", classLabel), new OASDocument.Path
+                document.paths.Add($"/{classLabel}/{{id}}", new OASDocument.Path
                 {
                     get = GenerateGetEntityByIdOperation(classLabel),
                     patch = GeneratePatchToIdOperation(classLabel),
@@ -605,14 +610,14 @@ namespace OWL2OAS
         private static OASDocument.Operation GenerateDeleteByIdOperation(string classLabel)
         {
             OASDocument.Operation deleteOperation = new OASDocument.Operation();
-            deleteOperation.summary = string.Format("Delete a '{0}' object.", classLabel);
+            deleteOperation.summary = $"Delete a '{classLabel}' object.";
             deleteOperation.tags.Add(classLabel);
 
             // Add the ID parameter
             OASDocument.Parameter idParameter = new OASDocument.Parameter
             {
                 name = "id",
-                description = string.Format("Id of '{0}' to delete.", classLabel),
+                description = $"Id of '{classLabel}' to delete.",
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
                 schema = new OASDocument.PrimitiveSchema {
@@ -623,7 +628,7 @@ namespace OWL2OAS
 
             // Create each of the HTTP response types
             OASDocument.Response response404 = new OASDocument.Response();
-            response404.description = string.Format("An object of type '{0}' with the specified ID was not found.", classLabel);
+            response404.description = $"An object of type '{classLabel}' with the specified ID was not found.";
             deleteOperation.responses.Add("404", response404);
 
             OASDocument.Response response500 = new OASDocument.Response();
@@ -631,7 +636,7 @@ namespace OWL2OAS
             deleteOperation.responses.Add("500", response500);
 
             OASDocument.Response response200 = new OASDocument.Response();
-            response200.description = string.Format("'{0}' entity was successfully deleted.", classLabel);
+            response200.description = $"'{classLabel}' entity was successfully deleted.";
             deleteOperation.responses.Add("200", response200);
 
             return deleteOperation;
@@ -640,13 +645,13 @@ namespace OWL2OAS
         private static OASDocument.Operation GeneratePostEntityOperation(string classLabel)
         {
             OASDocument.Operation postOperation = new OASDocument.Operation();
-            postOperation.summary = string.Format("Create a new '{0}' object.", classLabel);
+            postOperation.summary = $"Create a new '{classLabel}' object.";
             postOperation.tags.Add(classLabel);
 
             OASDocument.Parameter bodyParameter = new OASDocument.Parameter
             {
                 name = "entity",
-                description = string.Format("New '{0}' entity that is to be added.", classLabel),
+                description = $"New '{classLabel}' entity that is to be added.",
                 InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
                 schema = new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel))
@@ -679,14 +684,14 @@ namespace OWL2OAS
         private static OASDocument.Operation GenerateGetEntityByIdOperation(string classLabel)
         {
             OASDocument.Operation getOperation = new OASDocument.Operation();
-            getOperation.summary = string.Format("Get a specific '{0}' object.", classLabel);
+            getOperation.summary = $"Get a specific '{classLabel}' object.";
             getOperation.tags.Add(classLabel);
 
             // Add the ID parameter
             OASDocument.Parameter idParameter = new OASDocument.Parameter
             {
                 name = "id",
-                description = string.Format("Id of '{0}' to return.", classLabel),
+                description = $"Id of '{classLabel}' to return.",
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
                 schema = new OASDocument.PrimitiveSchema
@@ -698,7 +703,7 @@ namespace OWL2OAS
 
             // Create each of the HTTP response types
             OASDocument.Response response404 = new OASDocument.Response();
-            response404.description = string.Format("An object of type '{0}' with the specified ID was not found.", classLabel);
+            response404.description = $"An object of type '{classLabel}' with the specified ID was not found.";
             getOperation.responses.Add("404", response404);
 
             OASDocument.Response response500 = new OASDocument.Response();
@@ -706,7 +711,7 @@ namespace OWL2OAS
             getOperation.responses.Add("500", response500);
 
             OASDocument.Response response200 = new OASDocument.Response();
-            response200.description = string.Format("A '{0}' object.", classLabel);
+            response200.description = $"A '{classLabel}' object.";
             getOperation.responses.Add("200", response200);
 
             response200.content = new Dictionary<string, OASDocument.Content>();
@@ -813,7 +818,7 @@ namespace OWL2OAS
                 OASDocument.Parameter parameter = new OASDocument.Parameter
                 {
                     name = propertyLabel,
-                    description = string.Format("Filter value on property '{0}'.", propertyLabel),
+                    description = $"Filter value on property '{propertyLabel}'.",
                     required = false,
                     schema = propertySchema,
                     InField = OASDocument.Parameter.InFieldValues.query
@@ -897,14 +902,14 @@ namespace OWL2OAS
         private static OASDocument.Operation GeneratePatchToIdOperation(string classLabel)
         {
             OASDocument.Operation patchOperation = new OASDocument.Operation();
-            patchOperation.summary = string.Format("Update a single property on a specific '{0}' object.", classLabel);
+            patchOperation.summary = $"Update a single property on a specific '{classLabel}' object.";
             patchOperation.tags.Add(classLabel);
 
             // Add the ID parameter
             OASDocument.Parameter idParameter = new OASDocument.Parameter
             {
                 name = "id",
-                description = string.Format("Id of '{0}' to update.", classLabel),
+                description = $"Id of '{classLabel}' to update.",
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
                 schema = new OASDocument.PrimitiveSchema {
@@ -938,7 +943,7 @@ namespace OWL2OAS
             patchOperation.responses.Add("400", response400);
 
             OASDocument.Response response404 = new OASDocument.Response();
-            response404.description = string.Format("An object of type '{0}' with the specified ID was not found.", classLabel);
+            response404.description = $"An object of type '{classLabel}' with the specified ID was not found.";
             patchOperation.responses.Add("404", response404);
 
             OASDocument.Response response500 = new OASDocument.Response();
@@ -962,14 +967,14 @@ namespace OWL2OAS
         private static OASDocument.Operation GeneratePutToIdOperation(string classLabel)
         {
             OASDocument.Operation putOperation = new OASDocument.Operation();
-            putOperation.summary = string.Format("Update an existing '{0}' entity.", classLabel);
+            putOperation.summary = $"Update an existing '{classLabel}' entity.";
             putOperation.tags.Add(classLabel);
 
             // Add the ID parameter
             OASDocument.Parameter idParameter = new OASDocument.Parameter
             {
                 name = "id",
-                description = string.Format("Id of '{0}' to update.", classLabel),
+                description = $"Id of '{classLabel}' to update.",
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
                 schema = new OASDocument.PrimitiveSchema {
@@ -979,7 +984,7 @@ namespace OWL2OAS
             OASDocument.Parameter bodyParameter = new OASDocument.Parameter
             {
                 name = "entity",
-                description = string.Format("Updated data for '{0}' entity.", classLabel),
+                description = $"Updated data for '{classLabel}' entity.",
                 InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
                 schema = new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel))
@@ -993,7 +998,7 @@ namespace OWL2OAS
             putOperation.responses.Add("400", response400);
 
             OASDocument.Response response404 = new OASDocument.Response();
-            response404.description = string.Format("An object of type '{0}' with the specified ID was not found.", classLabel);
+            response404.description = $"An object of type '{classLabel}' with the specified ID was not found.";
             putOperation.responses.Add("404", response404);
 
             OASDocument.Response response500 = new OASDocument.Response();
