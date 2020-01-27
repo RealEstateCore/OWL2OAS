@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -69,6 +70,9 @@ namespace OWL2OAS
         private static Dictionary<string, HashSet<string>> requiredPropertiesForEachClass = new Dictionary<string, HashSet<string>>();
 
         private static Dictionary<Uri, string> namespacePrefixes = new Dictionary<Uri, string>();
+
+        // Used in string handling etc
+        private static readonly CultureInfo invariantCulture = CultureInfo.InvariantCulture;
 
         // Various configuration fields
         private static string _server;
@@ -143,8 +147,6 @@ namespace OWL2OAS
 
             // Clear cache from any prior runs
             UriLoader.Cache.Clear();
-
-            Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
 
             // Load ontology graph from local or remote path
             OntologyGraph rootOntologyGraph = new OntologyGraph();
@@ -352,7 +354,8 @@ namespace OWL2OAS
             IUriNode dcDescription = rootOntologyGraph.CreateUriNode(VocabularyHelper.DC.description);
             if (rootOntology.GetNodesViaProperty(dcDescription).LiteralNodes().Any())
             {
-                string ontologyDescription = rootOntology.GetNodesViaProperty(dcDescription).LiteralNodes().OrderBy(description => description.HasLanguage()).First().Value.Trim().Replace("\r\n", "\n").Replace("\n", "<br/>");
+                ILiteralNode ontologyDescriptionLiteral = rootOntology.GetNodesViaProperty(dcDescription).LiteralNodes().OrderBy(description => description.HasLanguage()).First();
+                string ontologyDescription = ontologyDescriptionLiteral.Value.Trim().Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\n", "<br/>", StringComparison.Ordinal);
                 docInfo.description = $"The documentation below is automatically extracted from a <dc:description> annotation on the ontology {rootOntology}:<br/><br/>*{ontologyDescription}*";
             }
 
@@ -1040,7 +1043,7 @@ namespace OWL2OAS
             if (minCardinalities.LiteralNodes().Count() == 1 &&
                 minCardinalities.LiteralNodes().First().IsInteger())
             {
-                return int.Parse(minCardinalities.LiteralNodes().First().Value);
+                return int.Parse(minCardinalities.LiteralNodes().First().Value, invariantCulture);
             }
 
             if (restriction.GetNodesViaProperty(someValuesFrom).Count() == 1)
@@ -1062,7 +1065,7 @@ namespace OWL2OAS
             if (exactCardinalities.LiteralNodes().Count() == 1 &&
                 exactCardinalities.LiteralNodes().First().IsInteger())
             {
-                return int.Parse(exactCardinalities.LiteralNodes().First().Value);
+                return int.Parse(exactCardinalities.LiteralNodes().First().Value, invariantCulture);
             }
 
             IEnumerable<INode> exactQualifiedCardinalities = restriction.GetNodesViaProperty(qualifiedCardinality);
@@ -1071,7 +1074,7 @@ namespace OWL2OAS
             {
                 IEnumerable<IUriNode> qualifierClasses = restriction.GetNodesViaProperty(onClass).UriNodes();
                 if (qualifierClasses.Count() == 1 && qualifierClasses.First().Uri.Equals(VocabularyHelper.OWL.Thing)) { 
-                    return int.Parse(exactQualifiedCardinalities.LiteralNodes().First().Value);
+                    return int.Parse(exactQualifiedCardinalities.LiteralNodes().First().Value, invariantCulture);
                 }
             }
 
@@ -1089,7 +1092,7 @@ namespace OWL2OAS
             if (maxCardinalities.LiteralNodes().Count() == 1 &&
                 maxCardinalities.LiteralNodes().First().IsInteger())
             {
-                return int.Parse(maxCardinalities.LiteralNodes().First().Value);
+                return int.Parse(maxCardinalities.LiteralNodes().First().Value, invariantCulture);
             }
 
             IEnumerable<INode> maxQualifiedCardinalities = restriction.GetNodesViaProperty(maxQualifiedCardinality);
@@ -1099,7 +1102,7 @@ namespace OWL2OAS
                 IEnumerable<IUriNode> qualifierClasses = restriction.GetNodesViaProperty(onClass).UriNodes();
                 if (qualifierClasses.Count() == 1 && qualifierClasses.First().Uri.Equals(VocabularyHelper.OWL.Thing))
                 {
-                    return int.Parse(maxQualifiedCardinalities.LiteralNodes().First().Value);
+                    return int.Parse(maxQualifiedCardinalities.LiteralNodes().First().Value, invariantCulture);
                 }
             }
 
