@@ -14,8 +14,18 @@ namespace OWL2OAS
 {
     class Program
     {
+        public enum EntityInclusionPolicy
+        {
+            DefaultInclude,
+            DefaultExclude
+        }
+
         public class Options
         {
+            [Option('c', "ClassInclusionPolicy", Default = EntityInclusionPolicy.DefaultInclude, HelpText = "Whether to include all classes by default (overridden by o2o:included annotation). Valid options: DefaultInclude or DefaultExclude.")]
+            public EntityInclusionPolicy ClassInclusionPolicy { get; set; }
+            [Option('p', "PropertyInclusionPolicy", Default=EntityInclusionPolicy.DefaultInclude, HelpText = "Whether to include all properties by default (overridden by o2o:included annotation). Valid options: DefaultInclude or DefaultExclude.")]
+            public EntityInclusionPolicy PropertyInclusionPolicy { get; set; }
             [Option('n', "no-imports", Required = false, HelpText = "Sets program to not follow owl:Imports declarations.")]
             public bool NoImports { get; set; }
             [Option('s', "server", Default = "http://localhost:8080/", Required = false, HelpText = "The server URL (where presumably an API implementation is running).")]
@@ -78,6 +88,8 @@ namespace OWL2OAS
         private static bool _noImports;
         private static bool _localOntology;
         private static string _ontologyPath;
+        private static bool _defaultIncludeClasses;
+        private static bool _defaultIncludeProperties;
 
         /// <summary>
         /// Dictionary mapping some common XSD data types to corresponding OSA data types and formats, see
@@ -145,6 +157,8 @@ namespace OWL2OAS
                            _localOntology = false;
                            _ontologyPath = o.UriPath;
                        }
+                       _defaultIncludeClasses = (o.ClassInclusionPolicy == EntityInclusionPolicy.DefaultInclude ? true : false);
+                       _defaultIncludeProperties = (o.PropertyInclusionPolicy == EntityInclusionPolicy.DefaultInclude ? true : false);
                    })
                    .WithNotParsed((errs) =>
                    {
