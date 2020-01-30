@@ -2,6 +2,11 @@
 
 namespace OWL2OAS.VocabularyHelper
 {
+    public static class O2O
+    {
+        public static readonly Uri included = new Uri("https://karlhammar.com/owl2oas/o2o.owl#included");
+    }
+
     public static class DC
     {
         public static readonly Uri title = new Uri("http://purl.org/dc/elements/1.1/title");

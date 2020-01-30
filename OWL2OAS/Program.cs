@@ -6,6 +6,7 @@ using System.Text;
 using System.Web;
 using CommandLine;
 using VDS.RDF;
+using VDS.RDF.Nodes;
 using VDS.RDF.Ontology;
 using VDS.RDF.Parsing;
 using YamlDotNet.Serialization;
@@ -132,12 +133,46 @@ namespace OWL2OAS
             }
         }
 
+        /// <summary>
+        /// Checks whether an ontology class or property should be included in the output specification, based on a) the run time 
+        /// "ClassInclusionPolicy" and "PropertyInclusionPolicy" options, and b) any explicit annotations, if present, on the resource
+        /// in question using the https://karlhammar.com/owl2oas/o2o.owl#included annotation property.
+        /// </summary>
+        /// <param name="resource"></param>
+        /// <returns>True iff the resource is annotated with included=true OR the relevant entity inclusion policy is DefaultInclude AND there is no included=false annotation on the entity.</returns>
         private static bool IsIncluded(OntologyResource resource)
         {
-            // TODO: Implement
+            // Do not include deprecated entities
             if (resource.IsDeprecated())
+            {
                 return false;
-            return true;
+            }
+
+            // Check which inclusion policy applies; also, if resource is not class or property, throw exception right away
+            bool includeByDefault;
+            switch (resource)
+            {
+                case OntologyClass oClass:
+                    includeByDefault = _defaultIncludeClasses;
+                    break;
+                case OntologyProperty oProp:
+                    includeByDefault = _defaultIncludeProperties;
+                    break;
+                default:
+                    throw new RdfException($"Resource {resource} is neither an OntologyClass nor OntologyResource.");
+            }
+
+            // Check for existence of an o2o:included annotation; if so return based on this
+            IUriNode includeAnnotationProperty = rootOntology.OntologyGraph().CreateUriNode(VocabularyHelper.O2O.included);
+            IEnumerable<ILiteralNode> includeAnnotationValues = resource.GetNodesViaProperty(includeAnnotationProperty).LiteralNodes();
+            if (includeAnnotationValues.Count() == 1)
+            {
+                bool resourceIncluded = includeAnnotationValues.First().AsValuedNode().AsBoolean();
+                return resourceIncluded;
+            }
+
+            // If no annotation, go by the default policy
+            return includeByDefault;
         }
 
         static void Main(string[] args)
