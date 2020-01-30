@@ -120,6 +120,14 @@ namespace OWL2OAS
             }
         }
 
+        private static bool IsIncluded(OntologyResource resource)
+        {
+            // TODO: Implement
+            if (resource.IsDeprecated())
+                return false;
+            return true;
+        }
+
         static void Main(string[] args)
         {
             Parser.Default.ParseArguments<Options>(args)
@@ -368,7 +376,7 @@ namespace OWL2OAS
         private static void GenerateAtomicClassSchemas(OntologyGraph graph, OASDocument document)
         {
             // Iterate over all classes
-            foreach (OntologyClass oClass in graph.OwlClasses.Where(oClass => oClass.IsNamed() && !oClass.IsDeprecated()))
+            foreach (OntologyClass oClass in graph.OwlClasses.Where(oClass => oClass.IsNamed() && IsIncluded(oClass)))
             {
                 // Get key name for API
                 string classLabel = GetKeyNameForResource(graph, oClass);
@@ -450,7 +458,7 @@ namespace OWL2OAS
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
                 IEnumerable<OntologyProperty> allProperties = oClass.IsExhaustiveDomainOf();
-                foreach (OntologyProperty property in allProperties.Where(prop => !prop.IsDeprecated()))
+                foreach (OntologyProperty property in allProperties.Where(prop => IsIncluded(prop)))
                 {
                     // We only process (named) object and data properties with singleton ranges.
                     if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1)
@@ -581,7 +589,7 @@ namespace OWL2OAS
         private static void GenerateClassPaths(OntologyGraph graph, OASDocument document)
         {
             // Iterate over all classes
-            foreach (OntologyClass oClass in graph.OwlClasses.Where(oClass => oClass.IsNamed() && !oClass.IsDeprecated()))
+            foreach (OntologyClass oClass in graph.OwlClasses.Where(oClass => oClass.IsNamed() && IsIncluded(oClass)))
             {
                 // Get key name for API
                 string classLabel = GetKeyNameForResource(graph, oClass);
@@ -738,7 +746,7 @@ namespace OWL2OAS
             foreach (OntologyProperty property in oClass.IsExhaustiveDomainOf()
             .Where(property => property.IsDataProperty() || property.IsObjectProperty())
             .Where(property => property.Ranges.Count() == 1)
-            .Where(property => !property.IsDeprecated()))
+            .Where(property => IsIncluded(property)))
             {
                 string propertyLabel = GetKeyNameForResource(property.OntologyGraph(), property);
 
