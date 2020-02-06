@@ -123,6 +123,18 @@ namespace OWL2OAS
                             {"@context", new PrimitiveSchema { type="string", format = "uri", DefaultValue="http://www.w3.org/ns/hydra/context.jsonld"} },
                             {"@type", new PrimitiveSchema { type="string", DefaultValue="Collection"} },
                             {"totalItems", new PrimitiveSchema { type="integer" } },
+                            {"view", new ComplexSchema
+                            {
+                                properties = new Dictionary<string, Schema>
+                                {
+                                    {"@id", new PrimitiveSchema { type="string", format="uri"} },
+                                    {"@type", new PrimitiveSchema { type="string", DefaultValue="PartialCollectionView"} },
+                                    {"first", new PrimitiveSchema { type="string"} },
+                                    {"previous", new PrimitiveSchema { type="string"} },
+                                    {"next", new PrimitiveSchema { type="string"} },
+                                    {"last", new PrimitiveSchema { type="string"} },
+                                }
+                            } }
                         }
                     }
                 },
