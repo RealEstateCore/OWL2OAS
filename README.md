@@ -28,20 +28,41 @@ To translate a remote file, use the `-u` option, as follows:
 ## Options
 
 ```
-  -n, --no-imports    Sets program to not follow owl:Imports declarations.
+  -c, --ClassInclusionPolicy       (Default: DefaultInclude) Whether to include
+                                   all classes by default (overridden by
+                                   o2o:included annotation). Valid options:
+                                   DefaultInclude or DefaultExclude.
 
-  -s, --server        (Default: http://localhost:8080/) The server URL (where
-                      presumably an API implementation is running).
+  -p, --PropertyInclusionPolicy    (Default: DefaultInclude) Whether to include
+                                   all properties by default (overridden by
+                                   o2o:included annotation). Valid options:
+                                   DefaultInclude or DefaultExclude.
 
-  -f, --file-path     Required. The path to the on-disk root ontology file to
-                      translate.
+  -n, --no-imports                 Sets program to not follow owl:Imports
+                                   declarations.
 
-  -u, --uri-path      Required. The URI of the root ontology file to translate.
+  -s, --server                     (Default: http://localhost:8080/) The server
+                                   URL (where presumably an API implementation
+                                   is running).
 
-  --help              Display this help screen.
+  -f, --file-path                  Required. The path to the on-disk root
+                                   ontology file to translate.
 
-  --version           Display version information.
+  -u, --uri-path                   Required. The URI of the root ontology file
+                                   to translate.
+
+  --help                           Display this help screen.
+
+  --version                        Display version information.
 ```
+
+## Entity inclusion policy
+
+By default we include all classes and properties found in the parsed ontologies. If you want to specifically exclude some entity from the generated output, apply the `https://karlhammar.com/owl2oas/o2o.owl#included` annotation property on it, with the boolean value `false`. If you want to reverse this inclusion policy, for classes or properties, use the command line options `--ClassInclusionPolicy` or `--PropertyInclusionPolicy` with the value `DefaultExclude`; then, *only* the entities of that kind which have been tagged with `https://karlhammar.com/owl2oas/o2o.owl#included` and the value `true` will be included.
+
+## OWL Entity Equivalence 
+
+We do not support equivalence between classes or between properties. Strange things will probably happen if you run this tool over ontologies that depend on equivalence axioms. Feel free to try it out though!
 
 ## Examples
 
