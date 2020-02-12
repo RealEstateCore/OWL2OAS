@@ -5,6 +5,7 @@ namespace OWL2OAS.VocabularyHelper
     public static class O2O
     {
         public static readonly Uri included = new Uri("https://karlhammar.com/owl2oas/o2o.owl#included");
+        public static readonly Uri endpoint = new Uri("https://karlhammar.com/owl2oas/o2o.owl#endpoint");
     }
 
     public static class DC

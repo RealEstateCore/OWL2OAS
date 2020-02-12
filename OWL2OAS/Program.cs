@@ -422,6 +422,17 @@ namespace OWL2OAS
             return $"{prefix}:{localName}";
         }
 
+        private static string GetEndpointName(OntologyGraph graph, OntologyResource cls)
+        {
+            IUriNode endpoint = graph.CreateUriNode(VocabularyHelper.O2O.endpoint);
+            IEnumerable<ILiteralNode> endpoints = cls.GetNodesViaProperty(endpoint).LiteralNodes();
+            if (endpoints.Any())
+            {
+                return endpoints.First().AsValuedNode().AsString();
+            }
+            return GetKeyNameForResource(graph, cls);
+        }
+
         private static void GenerateAtomicClassSchemas(OntologyGraph graph, OASDocument document)
         {
             // Iterate over all classes
@@ -642,14 +653,15 @@ namespace OWL2OAS
             {
                 // Get key name for API
                 string classLabel = GetKeyNameForResource(graph, oClass);
+                string endpointName = GetEndpointName(graph, oClass);
 
                 // Create paths and corresponding operations for class
-                document.paths.Add($"/{classLabel}", new OASDocument.Path
+                document.paths.Add($"/{endpointName}", new OASDocument.Path
                 {
                     get = GenerateGetEntitiesOperation(classLabel, oClass),
                     post = GeneratePostEntityOperation(classLabel)
                 });
-                document.paths.Add($"/{classLabel}/{{id}}", new OASDocument.Path
+                document.paths.Add($"/{endpointName}/{{id}}", new OASDocument.Path
                 {
                     get = GenerateGetEntityByIdOperation(classLabel),
                     patch = GeneratePatchToIdOperation(classLabel),
