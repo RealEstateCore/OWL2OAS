@@ -64,25 +64,25 @@ namespace OWL2OAS
         public class Components
         {
             public Dictionary<string, Parameter> parameters = new Dictionary<string, Parameter> {
-                { "offsetParam", new Parameter
+                { "pageParam", new Parameter
                     {
-                        name = "offset",
-                        description = "Number of items to skip before returning the results.",
+                        name = "page",
+                        description = "If the result set is large, pagination across the results can be employed; in that case, this parameter defines the page number that is requested by the client. The number of items included in each page is defined by the 'size' parameter. Default is 1, i.e., the first results page is returned.",
                         InField = Parameter.InFieldValues.query,
                         required = false,
                         schema = new PrimitiveSchema {
                             type = "integer",
                             format = "int32",
-                            minimum = 0,
-                            DefaultValue = "0"
+                            minimum = 1,
+                            DefaultValue = "1"
                         }
                     }
                 },
                 {
-                    "limitParam", new Parameter
+                    "sizeParam", new Parameter
                     {
-                        name = "limit",
-                        description = "Maximum number of items to return.",
+                        name = "size",
+                        description = "The number of items to display on a returned results page (see the page parameter).",
                         InField = Parameter.InFieldValues.query,
                         required = false,
                         schema = new PrimitiveSchema {

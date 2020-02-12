@@ -785,8 +785,8 @@ namespace OWL2OAS
             getOperation.tags.Add(classLabel);
 
             // Add pagination parameters
-            getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "offsetParam" });
-            getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "limitParam" });
+            getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "pageParam" });
+            getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "sizeParam" });
 
             // Add sort param
             getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "sortParam" });
