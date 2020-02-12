@@ -658,24 +658,24 @@ namespace OWL2OAS
                 // Create paths and corresponding operations for class
                 document.paths.Add($"/{endpointName}", new OASDocument.Path
                 {
-                    get = GenerateGetEntitiesOperation(classLabel, oClass),
-                    post = GeneratePostEntityOperation(classLabel)
+                    get = GenerateGetEntitiesOperation(endpointName, classLabel, oClass),
+                    post = GeneratePostEntityOperation(endpointName, classLabel)
                 });
                 document.paths.Add($"/{endpointName}/{{id}}", new OASDocument.Path
                 {
-                    get = GenerateGetEntityByIdOperation(classLabel),
-                    patch = GeneratePatchToIdOperation(classLabel),
-                    put = GeneratePutToIdOperation(classLabel),
-                    delete = GenerateDeleteByIdOperation(classLabel)
+                    get = GenerateGetEntityByIdOperation(endpointName, classLabel),
+                    patch = GeneratePatchToIdOperation(endpointName, classLabel),
+                    put = GeneratePutToIdOperation(endpointName, classLabel),
+                    delete = GenerateDeleteByIdOperation(endpointName, classLabel)
                 });
             }
         }
 
-        private static OASDocument.Operation GenerateDeleteByIdOperation(string classLabel)
+        private static OASDocument.Operation GenerateDeleteByIdOperation(string endpointName, string classLabel)
         {
             OASDocument.Operation deleteOperation = new OASDocument.Operation();
             deleteOperation.summary = $"Delete a '{classLabel}' object.";
-            deleteOperation.tags.Add(classLabel);
+            deleteOperation.tags.Add(endpointName);
 
             // Add the ID parameter
             OASDocument.Parameter idParameter = new OASDocument.Parameter
@@ -706,11 +706,11 @@ namespace OWL2OAS
             return deleteOperation;
         }
 
-        private static OASDocument.Operation GeneratePostEntityOperation(string classLabel)
+        private static OASDocument.Operation GeneratePostEntityOperation(string endpointName, string classLabel)
         {
             OASDocument.Operation postOperation = new OASDocument.Operation();
             postOperation.summary = $"Create a new '{classLabel}' object.";
-            postOperation.tags.Add(classLabel);
+            postOperation.tags.Add(endpointName);
 
             OASDocument.Parameter bodyParameter = new OASDocument.Parameter
             {
@@ -745,11 +745,11 @@ namespace OWL2OAS
             return postOperation;
         }
 
-        private static OASDocument.Operation GenerateGetEntityByIdOperation(string classLabel)
+        private static OASDocument.Operation GenerateGetEntityByIdOperation(string endpointName, string classLabel)
         {
             OASDocument.Operation getOperation = new OASDocument.Operation();
             getOperation.summary = $"Get a specific '{classLabel}' object.";
-            getOperation.tags.Add(classLabel);
+            getOperation.tags.Add(endpointName);
 
             // Add the ID parameter
             OASDocument.Parameter idParameter = new OASDocument.Parameter
@@ -788,13 +788,13 @@ namespace OWL2OAS
             return getOperation;
         }
 
-        private static OASDocument.Operation GenerateGetEntitiesOperation(string classLabel, OntologyClass oClass)
+        private static OASDocument.Operation GenerateGetEntitiesOperation(string endpointName, string classLabel, OntologyClass oClass)
         {
 
             // Create Get
             OASDocument.Operation getOperation = new OASDocument.Operation();
             getOperation.summary = "Get '" + classLabel + "' entities.";
-            getOperation.tags.Add(classLabel);
+            getOperation.tags.Add(endpointName);
 
             // Add pagination parameters
             getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "pageParam" });
@@ -958,11 +958,11 @@ namespace OWL2OAS
             return itemSchema;
         }
 
-        private static OASDocument.Operation GeneratePatchToIdOperation(string classLabel)
+        private static OASDocument.Operation GeneratePatchToIdOperation(string endpointName, string classLabel)
         {
             OASDocument.Operation patchOperation = new OASDocument.Operation();
             patchOperation.summary = $"Update a single property on a specific '{classLabel}' object.";
-            patchOperation.tags.Add(classLabel);
+            patchOperation.tags.Add(endpointName);
 
             // Add the ID parameter
             OASDocument.Parameter idParameter = new OASDocument.Parameter
@@ -1023,11 +1023,11 @@ namespace OWL2OAS
             return patchOperation;
         }
 
-        private static OASDocument.Operation GeneratePutToIdOperation(string classLabel)
+        private static OASDocument.Operation GeneratePutToIdOperation(string endpointName, string classLabel)
         {
             OASDocument.Operation putOperation = new OASDocument.Operation();
             putOperation.summary = $"Update an existing '{classLabel}' entity.";
-            putOperation.tags.Add(classLabel);
+            putOperation.tags.Add(endpointName);
 
             // Add the ID parameter
             OASDocument.Parameter idParameter = new OASDocument.Parameter
