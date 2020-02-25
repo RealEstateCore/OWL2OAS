@@ -321,7 +321,7 @@ namespace OWL2OAS
             {
                 type = "string",
                 format = "uri",
-                DefaultValue = rootOntology.GetIri().ToString()
+                DefaultValue = "http://www.w3.org/ns/hydra/core#"
             };
             // Set @context/@base (default data namespace)
             OASDocument.PrimitiveSchema baseNamespaceSchema = new OASDocument.PrimitiveSchema
@@ -491,9 +491,6 @@ namespace OWL2OAS
                         }
                     }
                 }
-
-                // Add reference to context schema
-                schema.properties.Add("@context", new OASDocument.ReferenceSchema("Context"));
 
                 // Add @id for all entries
                 OASDocument.PrimitiveSchema idSchema = new OASDocument.PrimitiveSchema();
@@ -718,7 +715,7 @@ namespace OWL2OAS
                 description = $"New '{classLabel}' entity that is to be added.",
                 InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
-                schema = new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel))
+                schema = MergeAtomicSchemaWithContext(classLabel)
             };
             postOperation.parameters.Add(bodyParameter);
 
@@ -740,7 +737,7 @@ namespace OWL2OAS
             response201.content.Add("application/jsonld", content201);
 
             // Response is per previously defined schema
-            content201.schema = MergeAtomicSchemaWithRequiredProperties(classLabel);
+            content201.schema = MergeAtomicSchemaWithContextAndRequiredProperties(classLabel);
 
             return postOperation;
         }
@@ -783,7 +780,7 @@ namespace OWL2OAS
             response200.content.Add("application/jsonld", content200);
 
             // Response is per previously defined schema
-            content200.schema = MergeAtomicSchemaWithRequiredProperties(classLabel);
+            content200.schema = MergeAtomicSchemaWithContextAndRequiredProperties(classLabel);
 
             return getOperation;
         }
@@ -910,7 +907,7 @@ namespace OWL2OAS
 
             // Generate schema with required fields propped on via allOf (if any required fields exist)
             OASDocument.Schema classSchemaWithRequiredProperties = MergeAtomicSchemaWithRequiredProperties(classLabel);
-
+            
             // Generate wrapper Hydra schema (https://www.hydra-cg.com/spec/latest/core/)
             OASDocument.Schema hydraSchema = new OASDocument.AllOfSchema
             {
@@ -958,6 +955,59 @@ namespace OWL2OAS
             return itemSchema;
         }
 
+        private static OASDocument.Schema MergeAtomicSchemaWithContext(string classLabel)
+        {
+            OASDocument.AllOfSchema itemSchema = new OASDocument.AllOfSchema();
+            OASDocument.ReferenceSchema classSchema = new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel));
+            OASDocument.ReferenceSchema contextReferenceSchema = new OASDocument.ReferenceSchema("Context");
+            OASDocument.ComplexSchema contextPropertySchema = new OASDocument.ComplexSchema
+            {
+                required = new List<string> { "@context" },
+                properties = new Dictionary<string, OASDocument.Schema>() { { "@context", contextReferenceSchema } }
+            };
+
+            // Otherwise merge only with context
+            itemSchema.allOf = new OASDocument.Schema[]
+            {
+                contextPropertySchema,
+                classSchema
+            };
+            return itemSchema;
+        }
+
+        private static OASDocument.Schema MergeAtomicSchemaWithContextAndRequiredProperties(string classLabel)
+        {
+            OASDocument.AllOfSchema itemSchema = new OASDocument.AllOfSchema();
+            OASDocument.ReferenceSchema classSchema = new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel));
+            OASDocument.ReferenceSchema contextReferenceSchema = new OASDocument.ReferenceSchema("Context");
+            OASDocument.ComplexSchema contextPropertySchema = new OASDocument.ComplexSchema
+            {
+                required = new List<string> { "@context" },
+                properties = new Dictionary<string, OASDocument.Schema>() { { "@context", contextReferenceSchema } }
+            };
+
+            // If there are required properties, merge them also
+            if (requiredPropertiesForEachClass[classLabel].Count != 0)
+            {
+                OASDocument.ComplexSchema requiredPropertiesSchema = new OASDocument.ComplexSchema { required = requiredPropertiesForEachClass[classLabel].ToList() };
+                itemSchema.allOf = new OASDocument.Schema[]
+                {
+                    contextPropertySchema,
+                    classSchema,
+                    requiredPropertiesSchema
+                };
+                return itemSchema;
+            }
+
+            // Otherwise merge only with context
+            itemSchema.allOf = new OASDocument.Schema[]
+            {
+                contextPropertySchema,
+                classSchema
+            };
+            return itemSchema;
+        }
+
         private static OASDocument.Operation GeneratePatchToIdOperation(string endpointName, string classLabel)
         {
             OASDocument.Operation patchOperation = new OASDocument.Operation();
@@ -975,6 +1025,14 @@ namespace OWL2OAS
                     type = "string"
                 }
             };
+
+            OASDocument.ReferenceSchema contextReferenceSchema = new OASDocument.ReferenceSchema("Context");
+            OASDocument.ComplexSchema contextPropertySchema = new OASDocument.ComplexSchema
+            {
+                required = new List<string> { "@context" },
+                properties = new Dictionary<string, OASDocument.Schema>() { { "@context", contextReferenceSchema } }
+            };
+
             OASDocument.Parameter bodyParameter = new OASDocument.Parameter
             {
                 name = "patch",
@@ -984,9 +1042,9 @@ namespace OWL2OAS
                 schema = new OASDocument.AllOfSchema
                 {
                     allOf = new OASDocument.Schema[] {
+                        contextPropertySchema,
                         new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel)),
                         new OASDocument.ComplexSchema {
-                            required =  new List<string> { "@context" },
                             minProperties = 2,
                             maxProperties = 2
                         }
@@ -1018,7 +1076,7 @@ namespace OWL2OAS
             response200.content.Add("application/jsonld", content200);
 
             // Response is per previously defined schema
-            content200.schema = MergeAtomicSchemaWithRequiredProperties(classLabel);
+            content200.schema = MergeAtomicSchemaWithContextAndRequiredProperties(classLabel);
 
             return patchOperation;
         }
@@ -1046,7 +1104,7 @@ namespace OWL2OAS
                 description = $"Updated data for '{classLabel}' entity.",
                 InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
-                schema = new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel))
+                schema = MergeAtomicSchemaWithContext(classLabel)
             };
             putOperation.parameters.Add(idParameter);
             putOperation.parameters.Add(bodyParameter);
@@ -1073,7 +1131,7 @@ namespace OWL2OAS
             response200.content.Add("application/jsonld", content200);
 
             // Response is per previously defined schema
-            content200.schema = MergeAtomicSchemaWithRequiredProperties(classLabel);
+            content200.schema = MergeAtomicSchemaWithContextAndRequiredProperties(classLabel);
 
             return putOperation;
         }
