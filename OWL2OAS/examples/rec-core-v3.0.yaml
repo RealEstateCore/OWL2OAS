@@ -1,4 +1,4 @@
-﻿openapi: 3.0.0
+﻿openapi: 3.0.2
 info:
   title: RealEstateCore Core Module
   license:
@@ -8,67 +8,154 @@ info:
   version: "3.0"
 components:
   parameters:
-    offsetParam:
-      name: offset
-      description: Number of items to skip before returning the results.
-      schema:
-        type: integer
-        format: int32
-        minimum: 0
-        default: 0
-      in: query
-    limitParam:
-      name: limit
-      description: Maximum number of items to return.
+    pageParam:
+      name: page
+      description: If the result set is large, pagination across the results can be employed; in that case, this parameter defines the page number that is requested by the client. The number of items included in each page is defined by the 'size' parameter. Default is 1, i.e., the first results page is returned.
       schema:
         type: integer
         format: int32
         minimum: 1
+        default: 1
+      in: query
+    sizeParam:
+      name: size
+      description: The number of items to display on a returned results page (see the page parameter).
+      schema:
+        type: integer
+        format: int32
         maximum: 100
         default: 20
       in: query
+    sortParam:
+      name: sort
+      description: The field and direction to sort results on.
+      schema:
+        $ref: '#/components/schemas/SortingSchema'
+      style: deepObject
+      in: query
   schemas:
-    Context:
+    HydraCollectionWrapper:
       type: object
       required:
-      - '@vocab'
-      - '@base'
-      - label
-      properties:
-        '@vocab':
-          type: string
-          format: uri
-          default: https://w3id.org/rec/core/3.0/
-        '@base':
-          type: string
-          format: uri
-        label:
-          type: string
-          format: uri
-          default: http://www.w3.org/2000/01/rdf-schema#label
-    Geometry:
-      type: object
+      - '@context'
+      - '@type'
+      - hydra:member
       properties:
         '@context':
           $ref: '#/components/schemas/Context'
+        '@type':
+          type: string
+          default: hydra:Collection
+        hydra:totalItems:
+          type: integer
+        hydra:view:
+          type: object
+          properties:
+            '@id':
+              type: string
+              format: uri
+            '@type':
+              type: string
+              default: hydra:PartialCollectionView
+            hydra:first:
+              type: string
+            hydra:previous:
+              type: string
+            hydra:next:
+              type: string
+            hydra:last:
+              type: string
+    IntegerFilter:
+      type: object
+      properties:
+        eq:
+          type: integer
+        lt:
+          type: integer
+        lte:
+          type: integer
+        gt:
+          type: integer
+        gte:
+          type: integer
+    NumberFilter:
+      type: object
+      properties:
+        eq:
+          type: number
+        lt:
+          type: number
+        lte:
+          type: number
+        gt:
+          type: number
+        gte:
+          type: number
+    StringFilter:
+      type: object
+      properties:
+        eq:
+          type: string
+        contains:
+          type: string
+        regex:
+          type: string
+    DateTimeFilter:
+      type: object
+      properties:
+        eq:
+          type: string
+          format: date-time
+        starting:
+          type: string
+          format: date-time
+        ending:
+          type: string
+          format: date-time
+        before:
+          type: string
+          format: date-time
+        after:
+          type: string
+          format: date-time
+        latest:
+          type: boolean
+    SortingSchema:
+      type: object
+      properties:
+        asc:
+          type: string
+        desc:
+          type: string
+    geosparql:Geometry:
+      type: object
+      required:
+      - '@context'
+      properties:
         '@id':
           type: string
         '@type':
           type: string
-          default: Geometry
+          default: geosparql:Geometry
         label:
           type: string
-        asGML:
-          type: string
-        asWKT:
-          type: string
-        hasSerialization:
-          type: string
+        geosparql:asGML:
+          type: array
+          items:
+            type: string
+        geosparql:asWKT:
+          type: array
+          items:
+            type: string
+        geosparql:hasSerialization:
+          type: array
+          items:
+            type: string
     Building:
       type: object
+      required:
+      - '@context'
       properties:
-        '@context':
-          $ref: '#/components/schemas/Context'
         '@id':
           type: string
         '@type':
@@ -76,43 +163,45 @@ components:
           default: Building
         label:
           type: string
+        isPartOfRealEstate:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: RealEstate
         hasBuildingComponent:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: BuildingComponent
-          required:
-          - '@id'
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: BuildingComponent
         hasGeoReferenceOrigo:
           type: object
+          required:
+          - '@id'
           properties:
             '@id':
               type: string
             '@type':
               type: string
               default: GeoReferenceOrigo
-          required:
-          - '@id'
-        isPartOfRealEstate:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: RealEstate
-          required:
-          - '@id'
     BuildingComponent:
       type: object
       required:
-      - isPartOfBuilding
+      - '@context'
       properties:
-        '@context':
-          $ref: '#/components/schemas/Context'
         '@id':
           type: string
         '@type':
@@ -120,51 +209,59 @@ components:
           default: BuildingComponent
         label:
           type: string
-        containsMountedDevice:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: Device
-          required:
-          - '@id'
-        hasSubBuildingComponent:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: BuildingComponent
-          required:
-          - '@id'
-        hasSuperBuildingComponent:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: BuildingComponent
-          required:
-          - '@id'
         isPartOfBuilding:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: Building
-          required:
-          - '@id'
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: Building
+        hasSuperBuildingComponent:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: BuildingComponent
+        containsMountedDevice:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: Device
+        hasSubBuildingComponent:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: BuildingComponent
     Device:
       type: object
+      required:
+      - '@context'
       properties:
-        '@context':
-          $ref: '#/components/schemas/Context'
         '@id':
           type: string
         '@type':
@@ -172,101 +269,117 @@ components:
           default: Device
         label:
           type: string
-        associatedWithEvent:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: Event
-          required:
-          - '@id'
-        deviceMeasurementUnit:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: MeasurementUnit
-          required:
-          - '@id'
-        hasSubDevice:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: Device
-          required:
-          - '@id'
         hasSuperDevice:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: Device
-          required:
-          - '@id'
-        isMountedInBuildingComponent:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: BuildingComponent
-          required:
-          - '@id'
-        servesBuilding:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: Building
-          required:
-          - '@id'
-        servesBuildingComponent:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: BuildingComponent
-          required:
-          - '@id'
-        servesDevice:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: Device
-          required:
-          - '@id'
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: Device
         quantityKind:
           type: object
+          required:
+          - '@id'
           properties:
             '@id':
               type: string
             '@type':
               type: string
               default: QuantityKind
-          required:
-          - '@id'
+        isMountedInBuildingComponent:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: BuildingComponent
+        associatedWithEvent:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: Event
+        deviceMeasurementUnit:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: MeasurementUnit
+        hasSubDevice:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: Device
+        servesBuilding:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: Building
+        servesBuildingComponent:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: BuildingComponent
+        servesDevice:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: Device
     Event:
       type: object
+      required:
+      - '@context'
       properties:
-        '@context':
-          $ref: '#/components/schemas/Context'
         '@id':
           type: string
         '@type':
@@ -275,47 +388,67 @@ components:
         label:
           type: string
         eventMeasurementUnit:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: MeasurementUnit
-          required:
-          - '@id'
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: MeasurementUnit
         hasCreatedTime:
-          type: string
-          format: date-time
+          type: array
+          items:
+            type: string
+            format: date-time
         hasDeletedTime:
-          type: string
-          format: date-time
+          type: array
+          items:
+            type: string
+            format: date-time
         hasDuration:
-          type: number
-          format: double
+          type: array
+          items:
+            type: number
+            format: double
         hasObservationTime:
-          type: string
-          format: date-time
+          type: array
+          items:
+            type: string
+            format: date-time
         hasPointInTime:
-          type: string
-          format: date-time
+          type: array
+          items:
+            type: string
+            format: date-time
         hasReadTime:
-          type: string
-          format: date-time
+          type: array
+          items:
+            type: string
+            format: date-time
         hasStartTime:
-          type: string
-          format: date-time
+          type: array
+          items:
+            type: string
+            format: date-time
         hasStopTime:
-          type: string
-          format: date-time
+          type: array
+          items:
+            type: string
+            format: date-time
         hasUpdatedTime:
-          type: string
-          format: date-time
+          type: array
+          items:
+            type: string
+            format: date-time
     GeoReferenceOrigo:
       type: object
+      required:
+      - '@context'
       properties:
-        '@context':
-          $ref: '#/components/schemas/Context'
         '@id':
           type: string
         '@type':
@@ -323,20 +456,28 @@ components:
           default: GeoReferenceOrigo
         label:
           type: string
+        geosparql:asGML:
+          type: array
+          items:
+            type: string
+        geosparql:asWKT:
+          type: array
+          items:
+            type: string
+        geosparql:hasSerialization:
+          type: array
+          items:
+            type: string
         hasGeoReferenceBearing:
-          type: number
-          format: double
-        asGML:
-          type: string
-        asWKT:
-          type: string
-        hasSerialization:
-          type: string
+          type: array
+          items:
+            type: number
+            format: double
     Land:
       type: object
+      required:
+      - '@context'
       properties:
-        '@context':
-          $ref: '#/components/schemas/Context'
         '@id':
           type: string
         '@type':
@@ -345,20 +486,22 @@ components:
         label:
           type: string
         isPartOfRealEstate:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: RealEstate
-          required:
-          - '@id'
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: RealEstate
     MeasurementUnit:
       type: object
+      required:
+      - '@context'
       properties:
-        '@context':
-          $ref: '#/components/schemas/Context'
         '@id':
           type: string
         '@type':
@@ -368,9 +511,9 @@ components:
           type: string
     QuantityKind:
       type: object
+      required:
+      - '@context'
       properties:
-        '@context':
-          $ref: '#/components/schemas/Context'
         '@id':
           type: string
         '@type':
@@ -379,20 +522,22 @@ components:
         label:
           type: string
         qkMeasurementUnit:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: MeasurementUnit
-          required:
-          - '@id'
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: MeasurementUnit
     RealEstate:
       type: object
+      required:
+      - '@context'
       properties:
-        '@context':
-          $ref: '#/components/schemas/Context'
         '@id':
           type: string
         '@type':
@@ -401,20 +546,22 @@ components:
         label:
           type: string
         hasRealEstateComponent:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: RealEstateComponent
-          required:
-          - '@id'
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: RealEstateComponent
     RealEstateComponent:
       type: object
+      required:
+      - '@context'
       properties:
-        '@context':
-          $ref: '#/components/schemas/Context'
         '@id':
           type: string
         '@type':
@@ -423,22 +570,22 @@ components:
         label:
           type: string
         isPartOfRealEstate:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: RealEstate
-          required:
-          - '@id'
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: RealEstate
     Room:
       type: object
       required:
-      - isPartOfBuilding
+      - '@context'
       properties:
-        '@context':
-          $ref: '#/components/schemas/Context'
         '@id':
           type: string
         '@type':
@@ -446,196 +593,365 @@ components:
           default: Room
         label:
           type: string
-        containsMountedDevice:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: Device
-          required:
-          - '@id'
-        hasSubBuildingComponent:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: BuildingComponent
-          required:
-          - '@id'
-        hasSuperBuildingComponent:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: BuildingComponent
-          required:
-          - '@id'
         isPartOfBuilding:
-          type: object
-          properties:
-            '@id':
-              type: string
-            '@type':
-              type: string
-              default: Building
-          required:
-          - '@id'
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: Building
+        hasSuperBuildingComponent:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: BuildingComponent
+        containsMountedDevice:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: Device
+        hasSubBuildingComponent:
+          type: array
+          items:
+            type: object
+            required:
+            - '@id'
+            properties:
+              '@id':
+                type: string
+              '@type':
+                type: string
+                default: BuildingComponent
+    Context:
+      type: object
+      required:
+      - '@vocab'
+      - '@base'
+      - hydra
+      - geosparql
+      properties:
+        '@vocab':
+          type: string
+          format: uri
+          default: https://w3id.org/rec/core/
+        '@base':
+          type: string
+          format: uri
+        hydra:
+          type: string
+          format: uri
+          default: http://www.w3.org/ns/hydra/core#
+        label:
+          type: string
+          format: uri
+          default: http://www.w3.org/2000/01/rdf-schema#label
+        geosparql:
+          type: string
+          format: uri
+          default: http://www.opengis.net/ont/geosparql#
 paths:
-  /JsonLdContext:
+  /LoadedOntologies:
     get:
-      summary: Get the JSON-LD @context for this API, i.e., the set of ontologies that were used to generate the API.
+      summary: Get the set of ontologies that were imported by the root ontology when the API was generated.
       parameters: []
       responses:
         200:
+          description: A list of ontologies used to generate this API. Note that while the prefix names used here correspond with the ones given in the JSON-LD @context for the supported data types, the prefix mapping in the API is based on the Ontology IRIs given in those @context blocks, which may differ from the values given here (which give priority to version IRIs).
           content:
-            application/jsonld:
+            application/json:
               schema:
-                $ref: '#/components/schemas/Context'
-          description: A JSON-LD @context declaration.
+                type: object
+                required:
+                - ''
+                properties:
+                  '':
+                    type: string
+                    format: uri
+                    enum:
+                    - https://w3id.org/rec/core/3.0/
       tags: []
-  /Geometry:
+  /geosparql:Geometry:
     get:
-      summary: Get 'Geometry' entities.
+      summary: Get 'geosparql:Geometry' entities.
       parameters:
-      - $ref: '#/components/parameters/offsetParam'
-      - $ref: '#/components/parameters/limitParam'
-      - name: asGML
-        description: Filter value on property 'asGML'.
+      - $ref: '#/components/parameters/pageParam'
+      - $ref: '#/components/parameters/sizeParam'
+      - $ref: '#/components/parameters/sortParam'
+      - name: geosparql:asGML
+        description: Filter value on property 'geosparql:asGML'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
-      - name: asWKT
-        description: Filter value on property 'asWKT'.
+      - name: geosparql:asWKT
+        description: Filter value on property 'geosparql:asWKT'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
-      - name: hasSerialization
-        description: Filter value on property 'hasSerialization'.
+      - name: geosparql:hasSerialization
+        description: Filter value on property 'geosparql:hasSerialization'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       responses:
+        400:
+          description: Bad Request
+        500:
+          description: Internal Server Error
         200:
+          description: An array of 'geosparql:Geometry' objects.
           content:
             application/jsonld:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Geometry'
-          description: An array of 'Geometry' objects.
+                allOf:
+                - $ref: '#/components/schemas/HydraCollectionWrapper'
+                - type: object
+                  properties:
+                    hydra:member:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/geosparql%3aGeometry'
       tags:
-      - Geometry
+      - geosparql:Geometry
     post:
-      summary: Create a new 'Geometry' object.
+      summary: Create a new 'geosparql:Geometry' object.
       parameters:
       - name: entity
-        description: New 'Geometry' entity that is to be added.
+        description: New 'geosparql:Geometry' entity that is to be added.
         required: true
         schema:
-          $ref: '#/components/schemas/Geometry'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/geosparql%3aGeometry'
         in: header
       responses:
-        200:
-          content:
-            application/jsonld:
-              schema:
-                $ref: '#/components/schemas/Geometry'
+        500:
+          description: Internal Server Error
+        400:
+          description: Bad Request
+        201:
           description: Entity was successfully created (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/geosparql%3aGeometry'
       tags:
-      - Geometry
-  /Geometry/{id}:
+      - geosparql:Geometry
+  /geosparql:Geometry/{id}:
     get:
-      summary: Get a specific 'Geometry' object.
+      summary: Get a specific 'geosparql:Geometry' object.
       parameters:
       - name: id
-        description: Id of 'Geometry' to return.
+        description: Id of 'geosparql:Geometry' to return.
         required: true
         schema:
           type: string
         in: path
       responses:
+        404:
+          description: An object of type 'geosparql:Geometry' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: A 'geosparql:Geometry' object.
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Geometry'
-          description: A 'Geometry' object.
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/geosparql%3aGeometry'
       tags:
-      - Geometry
+      - geosparql:Geometry
     put:
-      summary: Update an existing 'Geometry' entity.
+      summary: Update an existing 'geosparql:Geometry' entity.
       parameters:
       - name: id
-        description: Id of 'Geometry' to update.
+        description: Id of 'geosparql:Geometry' to update.
         required: true
         schema:
           type: string
         in: path
       - name: entity
-        description: Updated data for 'Geometry' entity.
+        description: Updated data for 'geosparql:Geometry' entity.
         required: true
         schema:
-          $ref: '#/components/schemas/Geometry'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/geosparql%3aGeometry'
         in: header
       responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'geosparql:Geometry' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: Entity was updated successfully (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Geometry'
-          description: Entity was updated successfully (new representation returned).
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/geosparql%3aGeometry'
       tags:
-      - Geometry
-    delete:
-      summary: Delete a 'Geometry' object.
+      - geosparql:Geometry
+    patch:
+      summary: Update a single property on a specific 'geosparql:Geometry' object.
       parameters:
       - name: id
-        description: Id of 'Geometry' to delete.
+        description: Id of 'geosparql:Geometry' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: patch
+        description: A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.
+        required: true
+        schema:
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/geosparql%3aGeometry'
+          - type: object
+            maxProperties: 2
+            minProperties: 2
+        in: header
+      responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'geosparql:Geometry' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
+          description: Entity was updated successfully (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/geosparql%3aGeometry'
+      tags:
+      - geosparql:Geometry
+    delete:
+      summary: Delete a 'geosparql:Geometry' object.
+      parameters:
+      - name: id
+        description: Id of 'geosparql:Geometry' to delete.
         required: true
         schema:
           type: string
         in: path
       responses:
-        default:
-          description: "'Geometry' entity was successfully deleted."
+        404:
+          description: An object of type 'geosparql:Geometry' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
+          description: "'geosparql:Geometry' entity was successfully deleted."
       tags:
-      - Geometry
+      - geosparql:Geometry
   /Building:
     get:
       summary: Get 'Building' entities.
       parameters:
-      - $ref: '#/components/parameters/offsetParam'
-      - $ref: '#/components/parameters/limitParam'
+      - $ref: '#/components/parameters/pageParam'
+      - $ref: '#/components/parameters/sizeParam'
+      - $ref: '#/components/parameters/sortParam'
+      - name: isPartOfRealEstate
+        description: Filter value on property 'isPartOfRealEstate'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
       - name: hasBuildingComponent
         description: Filter value on property 'hasBuildingComponent'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       - name: hasGeoReferenceOrigo
         description: Filter value on property 'hasGeoReferenceOrigo'.
         schema:
-          type: string
-        in: query
-      - name: isPartOfRealEstate
-        description: Filter value on property 'isPartOfRealEstate'.
-        schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       responses:
+        400:
+          description: Bad Request
+        500:
+          description: Internal Server Error
         200:
+          description: An array of 'Building' objects.
           content:
             application/jsonld:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Building'
-          description: An array of 'Building' objects.
+                allOf:
+                - $ref: '#/components/schemas/HydraCollectionWrapper'
+                - type: object
+                  properties:
+                    hydra:member:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Building'
       tags:
       - Building
     post:
@@ -645,15 +961,33 @@ paths:
         description: New 'Building' entity that is to be added.
         required: true
         schema:
-          $ref: '#/components/schemas/Building'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Building'
         in: header
       responses:
-        200:
+        500:
+          description: Internal Server Error
+        400:
+          description: Bad Request
+        201:
+          description: Entity was successfully created (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Building'
-          description: Entity was successfully created (new representation returned).
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Building'
       tags:
       - Building
   /Building/{id}:
@@ -667,12 +1001,23 @@ paths:
           type: string
         in: path
       responses:
+        404:
+          description: An object of type 'Building' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: A 'Building' object.
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Building'
-          description: A 'Building' object.
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Building'
       tags:
       - Building
     put:
@@ -688,15 +1033,82 @@ paths:
         description: Updated data for 'Building' entity.
         required: true
         schema:
-          $ref: '#/components/schemas/Building'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Building'
         in: header
       responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'Building' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: Entity was updated successfully (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Building'
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Building'
+      tags:
+      - Building
+    patch:
+      summary: Update a single property on a specific 'Building' object.
+      parameters:
+      - name: id
+        description: Id of 'Building' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: patch
+        description: A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.
+        required: true
+        schema:
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Building'
+          - type: object
+            maxProperties: 2
+            minProperties: 2
+        in: header
+      responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'Building' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: Entity was updated successfully (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Building'
       tags:
       - Building
     delete:
@@ -709,7 +1121,11 @@ paths:
           type: string
         in: path
       responses:
-        default:
+        404:
+          description: An object of type 'Building' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: "'Building' entity was successfully deleted."
       tags:
       - Building
@@ -717,37 +1133,51 @@ paths:
     get:
       summary: Get 'BuildingComponent' entities.
       parameters:
-      - $ref: '#/components/parameters/offsetParam'
-      - $ref: '#/components/parameters/limitParam'
-      - name: containsMountedDevice
-        description: Filter value on property 'containsMountedDevice'.
+      - $ref: '#/components/parameters/pageParam'
+      - $ref: '#/components/parameters/sizeParam'
+      - $ref: '#/components/parameters/sortParam'
+      - name: isPartOfBuilding
+        description: Filter value on property 'isPartOfBuilding'.
         schema:
-          type: string
-        in: query
-      - name: hasSubBuildingComponent
-        description: Filter value on property 'hasSubBuildingComponent'.
-        schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       - name: hasSuperBuildingComponent
         description: Filter value on property 'hasSuperBuildingComponent'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
-      - name: isPartOfBuilding
-        description: Filter value on property 'isPartOfBuilding'.
+      - name: containsMountedDevice
+        description: Filter value on property 'containsMountedDevice'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
+      - name: hasSubBuildingComponent
+        description: Filter value on property 'hasSubBuildingComponent'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       responses:
+        400:
+          description: Bad Request
+        500:
+          description: Internal Server Error
         200:
+          description: An array of 'BuildingComponent' objects.
           content:
             application/jsonld:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/BuildingComponent'
-          description: An array of 'BuildingComponent' objects.
+                allOf:
+                - $ref: '#/components/schemas/HydraCollectionWrapper'
+                - type: object
+                  properties:
+                    hydra:member:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/BuildingComponent'
       tags:
       - BuildingComponent
     post:
@@ -757,15 +1187,33 @@ paths:
         description: New 'BuildingComponent' entity that is to be added.
         required: true
         schema:
-          $ref: '#/components/schemas/BuildingComponent'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/BuildingComponent'
         in: header
       responses:
-        200:
+        500:
+          description: Internal Server Error
+        400:
+          description: Bad Request
+        201:
+          description: Entity was successfully created (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/BuildingComponent'
-          description: Entity was successfully created (new representation returned).
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/BuildingComponent'
       tags:
       - BuildingComponent
   /BuildingComponent/{id}:
@@ -779,12 +1227,23 @@ paths:
           type: string
         in: path
       responses:
+        404:
+          description: An object of type 'BuildingComponent' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: A 'BuildingComponent' object.
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/BuildingComponent'
-          description: A 'BuildingComponent' object.
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/BuildingComponent'
       tags:
       - BuildingComponent
     put:
@@ -800,15 +1259,82 @@ paths:
         description: Updated data for 'BuildingComponent' entity.
         required: true
         schema:
-          $ref: '#/components/schemas/BuildingComponent'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/BuildingComponent'
         in: header
       responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'BuildingComponent' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: Entity was updated successfully (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/BuildingComponent'
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/BuildingComponent'
+      tags:
+      - BuildingComponent
+    patch:
+      summary: Update a single property on a specific 'BuildingComponent' object.
+      parameters:
+      - name: id
+        description: Id of 'BuildingComponent' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: patch
+        description: A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.
+        required: true
+        schema:
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/BuildingComponent'
+          - type: object
+            maxProperties: 2
+            minProperties: 2
+        in: header
+      responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'BuildingComponent' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: Entity was updated successfully (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/BuildingComponent'
       tags:
       - BuildingComponent
     delete:
@@ -821,7 +1347,11 @@ paths:
           type: string
         in: path
       responses:
-        default:
+        404:
+          description: An object of type 'BuildingComponent' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: "'BuildingComponent' entity was successfully deleted."
       tags:
       - BuildingComponent
@@ -829,62 +1359,81 @@ paths:
     get:
       summary: Get 'Device' entities.
       parameters:
-      - $ref: '#/components/parameters/offsetParam'
-      - $ref: '#/components/parameters/limitParam'
-      - name: associatedWithEvent
-        description: Filter value on property 'associatedWithEvent'.
-        schema:
-          type: string
-        in: query
-      - name: deviceMeasurementUnit
-        description: Filter value on property 'deviceMeasurementUnit'.
-        schema:
-          type: string
-        in: query
-      - name: hasSubDevice
-        description: Filter value on property 'hasSubDevice'.
-        schema:
-          type: string
-        in: query
+      - $ref: '#/components/parameters/pageParam'
+      - $ref: '#/components/parameters/sizeParam'
+      - $ref: '#/components/parameters/sortParam'
       - name: hasSuperDevice
         description: Filter value on property 'hasSuperDevice'.
         schema:
-          type: string
-        in: query
-      - name: isMountedInBuildingComponent
-        description: Filter value on property 'isMountedInBuildingComponent'.
-        schema:
-          type: string
-        in: query
-      - name: servesBuilding
-        description: Filter value on property 'servesBuilding'.
-        schema:
-          type: string
-        in: query
-      - name: servesBuildingComponent
-        description: Filter value on property 'servesBuildingComponent'.
-        schema:
-          type: string
-        in: query
-      - name: servesDevice
-        description: Filter value on property 'servesDevice'.
-        schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       - name: quantityKind
         description: Filter value on property 'quantityKind'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
+      - name: isMountedInBuildingComponent
+        description: Filter value on property 'isMountedInBuildingComponent'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
+      - name: associatedWithEvent
+        description: Filter value on property 'associatedWithEvent'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
+      - name: deviceMeasurementUnit
+        description: Filter value on property 'deviceMeasurementUnit'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
+      - name: hasSubDevice
+        description: Filter value on property 'hasSubDevice'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
+      - name: servesBuilding
+        description: Filter value on property 'servesBuilding'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
+      - name: servesBuildingComponent
+        description: Filter value on property 'servesBuildingComponent'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
+      - name: servesDevice
+        description: Filter value on property 'servesDevice'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       responses:
+        400:
+          description: Bad Request
+        500:
+          description: Internal Server Error
         200:
+          description: An array of 'Device' objects.
           content:
             application/jsonld:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Device'
-          description: An array of 'Device' objects.
+                allOf:
+                - $ref: '#/components/schemas/HydraCollectionWrapper'
+                - type: object
+                  properties:
+                    hydra:member:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Device'
       tags:
       - Device
     post:
@@ -894,15 +1443,33 @@ paths:
         description: New 'Device' entity that is to be added.
         required: true
         schema:
-          $ref: '#/components/schemas/Device'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Device'
         in: header
       responses:
-        200:
+        500:
+          description: Internal Server Error
+        400:
+          description: Bad Request
+        201:
+          description: Entity was successfully created (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Device'
-          description: Entity was successfully created (new representation returned).
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Device'
       tags:
       - Device
   /Device/{id}:
@@ -916,12 +1483,23 @@ paths:
           type: string
         in: path
       responses:
+        404:
+          description: An object of type 'Device' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: A 'Device' object.
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Device'
-          description: A 'Device' object.
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Device'
       tags:
       - Device
     put:
@@ -937,15 +1515,82 @@ paths:
         description: Updated data for 'Device' entity.
         required: true
         schema:
-          $ref: '#/components/schemas/Device'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Device'
         in: header
       responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'Device' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: Entity was updated successfully (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Device'
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Device'
+      tags:
+      - Device
+    patch:
+      summary: Update a single property on a specific 'Device' object.
+      parameters:
+      - name: id
+        description: Id of 'Device' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: patch
+        description: A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.
+        required: true
+        schema:
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Device'
+          - type: object
+            maxProperties: 2
+            minProperties: 2
+        in: header
+      responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'Device' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: Entity was updated successfully (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Device'
       tags:
       - Device
     delete:
@@ -958,7 +1603,11 @@ paths:
           type: string
         in: path
       responses:
-        default:
+        404:
+          description: An object of type 'Device' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: "'Device' entity was successfully deleted."
       tags:
       - Device
@@ -966,76 +1615,87 @@ paths:
     get:
       summary: Get 'Event' entities.
       parameters:
-      - $ref: '#/components/parameters/offsetParam'
-      - $ref: '#/components/parameters/limitParam'
+      - $ref: '#/components/parameters/pageParam'
+      - $ref: '#/components/parameters/sizeParam'
+      - $ref: '#/components/parameters/sortParam'
       - name: eventMeasurementUnit
         description: Filter value on property 'eventMeasurementUnit'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       - name: hasCreatedTime
         description: Filter value on property 'hasCreatedTime'.
         schema:
-          type: string
-          format: date-time
+          $ref: '#/components/schemas/DateTimeFilter'
+        style: deepObject
         in: query
       - name: hasDeletedTime
         description: Filter value on property 'hasDeletedTime'.
         schema:
-          type: string
-          format: date-time
+          $ref: '#/components/schemas/DateTimeFilter'
+        style: deepObject
         in: query
       - name: hasDuration
         description: Filter value on property 'hasDuration'.
         schema:
-          type: number
-          format: double
+          $ref: '#/components/schemas/NumberFilter'
+        style: deepObject
         in: query
       - name: hasObservationTime
         description: Filter value on property 'hasObservationTime'.
         schema:
-          type: string
-          format: date-time
+          $ref: '#/components/schemas/DateTimeFilter'
+        style: deepObject
         in: query
       - name: hasPointInTime
         description: Filter value on property 'hasPointInTime'.
         schema:
-          type: string
-          format: date-time
+          $ref: '#/components/schemas/DateTimeFilter'
+        style: deepObject
         in: query
       - name: hasReadTime
         description: Filter value on property 'hasReadTime'.
         schema:
-          type: string
-          format: date-time
+          $ref: '#/components/schemas/DateTimeFilter'
+        style: deepObject
         in: query
       - name: hasStartTime
         description: Filter value on property 'hasStartTime'.
         schema:
-          type: string
-          format: date-time
+          $ref: '#/components/schemas/DateTimeFilter'
+        style: deepObject
         in: query
       - name: hasStopTime
         description: Filter value on property 'hasStopTime'.
         schema:
-          type: string
-          format: date-time
+          $ref: '#/components/schemas/DateTimeFilter'
+        style: deepObject
         in: query
       - name: hasUpdatedTime
         description: Filter value on property 'hasUpdatedTime'.
         schema:
-          type: string
-          format: date-time
+          $ref: '#/components/schemas/DateTimeFilter'
+        style: deepObject
         in: query
       responses:
+        400:
+          description: Bad Request
+        500:
+          description: Internal Server Error
         200:
+          description: An array of 'Event' objects.
           content:
             application/jsonld:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Event'
-          description: An array of 'Event' objects.
+                allOf:
+                - $ref: '#/components/schemas/HydraCollectionWrapper'
+                - type: object
+                  properties:
+                    hydra:member:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Event'
       tags:
       - Event
     post:
@@ -1045,15 +1705,33 @@ paths:
         description: New 'Event' entity that is to be added.
         required: true
         schema:
-          $ref: '#/components/schemas/Event'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Event'
         in: header
       responses:
-        200:
+        500:
+          description: Internal Server Error
+        400:
+          description: Bad Request
+        201:
+          description: Entity was successfully created (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Event'
-          description: Entity was successfully created (new representation returned).
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Event'
       tags:
       - Event
   /Event/{id}:
@@ -1067,12 +1745,23 @@ paths:
           type: string
         in: path
       responses:
+        404:
+          description: An object of type 'Event' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: A 'Event' object.
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Event'
-          description: A 'Event' object.
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Event'
       tags:
       - Event
     put:
@@ -1088,15 +1777,82 @@ paths:
         description: Updated data for 'Event' entity.
         required: true
         schema:
-          $ref: '#/components/schemas/Event'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Event'
         in: header
       responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'Event' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: Entity was updated successfully (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Event'
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Event'
+      tags:
+      - Event
+    patch:
+      summary: Update a single property on a specific 'Event' object.
+      parameters:
+      - name: id
+        description: Id of 'Event' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: patch
+        description: A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.
+        required: true
+        schema:
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Event'
+          - type: object
+            maxProperties: 2
+            minProperties: 2
+        in: header
+      responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'Event' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: Entity was updated successfully (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Event'
       tags:
       - Event
     delete:
@@ -1109,7 +1865,11 @@ paths:
           type: string
         in: path
       responses:
-        default:
+        404:
+          description: An object of type 'Event' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: "'Event' entity was successfully deleted."
       tags:
       - Event
@@ -1117,38 +1877,51 @@ paths:
     get:
       summary: Get 'GeoReferenceOrigo' entities.
       parameters:
-      - $ref: '#/components/parameters/offsetParam'
-      - $ref: '#/components/parameters/limitParam'
+      - $ref: '#/components/parameters/pageParam'
+      - $ref: '#/components/parameters/sizeParam'
+      - $ref: '#/components/parameters/sortParam'
+      - name: geosparql:asGML
+        description: Filter value on property 'geosparql:asGML'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
+      - name: geosparql:asWKT
+        description: Filter value on property 'geosparql:asWKT'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
+      - name: geosparql:hasSerialization
+        description: Filter value on property 'geosparql:hasSerialization'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
       - name: hasGeoReferenceBearing
         description: Filter value on property 'hasGeoReferenceBearing'.
         schema:
-          type: number
-          format: double
-        in: query
-      - name: asGML
-        description: Filter value on property 'asGML'.
-        schema:
-          type: string
-        in: query
-      - name: asWKT
-        description: Filter value on property 'asWKT'.
-        schema:
-          type: string
-        in: query
-      - name: hasSerialization
-        description: Filter value on property 'hasSerialization'.
-        schema:
-          type: string
+          $ref: '#/components/schemas/NumberFilter'
+        style: deepObject
         in: query
       responses:
+        400:
+          description: Bad Request
+        500:
+          description: Internal Server Error
         200:
+          description: An array of 'GeoReferenceOrigo' objects.
           content:
             application/jsonld:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/GeoReferenceOrigo'
-          description: An array of 'GeoReferenceOrigo' objects.
+                allOf:
+                - $ref: '#/components/schemas/HydraCollectionWrapper'
+                - type: object
+                  properties:
+                    hydra:member:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/GeoReferenceOrigo'
       tags:
       - GeoReferenceOrigo
     post:
@@ -1158,15 +1931,33 @@ paths:
         description: New 'GeoReferenceOrigo' entity that is to be added.
         required: true
         schema:
-          $ref: '#/components/schemas/GeoReferenceOrigo'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/GeoReferenceOrigo'
         in: header
       responses:
-        200:
+        500:
+          description: Internal Server Error
+        400:
+          description: Bad Request
+        201:
+          description: Entity was successfully created (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/GeoReferenceOrigo'
-          description: Entity was successfully created (new representation returned).
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/GeoReferenceOrigo'
       tags:
       - GeoReferenceOrigo
   /GeoReferenceOrigo/{id}:
@@ -1180,12 +1971,23 @@ paths:
           type: string
         in: path
       responses:
+        404:
+          description: An object of type 'GeoReferenceOrigo' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: A 'GeoReferenceOrigo' object.
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/GeoReferenceOrigo'
-          description: A 'GeoReferenceOrigo' object.
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/GeoReferenceOrigo'
       tags:
       - GeoReferenceOrigo
     put:
@@ -1201,15 +2003,82 @@ paths:
         description: Updated data for 'GeoReferenceOrigo' entity.
         required: true
         schema:
-          $ref: '#/components/schemas/GeoReferenceOrigo'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/GeoReferenceOrigo'
         in: header
       responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'GeoReferenceOrigo' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: Entity was updated successfully (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/GeoReferenceOrigo'
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/GeoReferenceOrigo'
+      tags:
+      - GeoReferenceOrigo
+    patch:
+      summary: Update a single property on a specific 'GeoReferenceOrigo' object.
+      parameters:
+      - name: id
+        description: Id of 'GeoReferenceOrigo' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: patch
+        description: A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.
+        required: true
+        schema:
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/GeoReferenceOrigo'
+          - type: object
+            maxProperties: 2
+            minProperties: 2
+        in: header
+      responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'GeoReferenceOrigo' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: Entity was updated successfully (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/GeoReferenceOrigo'
       tags:
       - GeoReferenceOrigo
     delete:
@@ -1222,7 +2091,11 @@ paths:
           type: string
         in: path
       responses:
-        default:
+        404:
+          description: An object of type 'GeoReferenceOrigo' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: "'GeoReferenceOrigo' entity was successfully deleted."
       tags:
       - GeoReferenceOrigo
@@ -1230,22 +2103,33 @@ paths:
     get:
       summary: Get 'Land' entities.
       parameters:
-      - $ref: '#/components/parameters/offsetParam'
-      - $ref: '#/components/parameters/limitParam'
+      - $ref: '#/components/parameters/pageParam'
+      - $ref: '#/components/parameters/sizeParam'
+      - $ref: '#/components/parameters/sortParam'
       - name: isPartOfRealEstate
         description: Filter value on property 'isPartOfRealEstate'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       responses:
+        400:
+          description: Bad Request
+        500:
+          description: Internal Server Error
         200:
+          description: An array of 'Land' objects.
           content:
             application/jsonld:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Land'
-          description: An array of 'Land' objects.
+                allOf:
+                - $ref: '#/components/schemas/HydraCollectionWrapper'
+                - type: object
+                  properties:
+                    hydra:member:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Land'
       tags:
       - Land
     post:
@@ -1255,15 +2139,33 @@ paths:
         description: New 'Land' entity that is to be added.
         required: true
         schema:
-          $ref: '#/components/schemas/Land'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Land'
         in: header
       responses:
-        200:
+        500:
+          description: Internal Server Error
+        400:
+          description: Bad Request
+        201:
+          description: Entity was successfully created (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Land'
-          description: Entity was successfully created (new representation returned).
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Land'
       tags:
       - Land
   /Land/{id}:
@@ -1277,12 +2179,23 @@ paths:
           type: string
         in: path
       responses:
+        404:
+          description: An object of type 'Land' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: A 'Land' object.
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Land'
-          description: A 'Land' object.
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Land'
       tags:
       - Land
     put:
@@ -1298,15 +2211,82 @@ paths:
         description: Updated data for 'Land' entity.
         required: true
         schema:
-          $ref: '#/components/schemas/Land'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Land'
         in: header
       responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'Land' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: Entity was updated successfully (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Land'
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Land'
+      tags:
+      - Land
+    patch:
+      summary: Update a single property on a specific 'Land' object.
+      parameters:
+      - name: id
+        description: Id of 'Land' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: patch
+        description: A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.
+        required: true
+        schema:
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Land'
+          - type: object
+            maxProperties: 2
+            minProperties: 2
+        in: header
+      responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'Land' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: Entity was updated successfully (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Land'
       tags:
       - Land
     delete:
@@ -1319,7 +2299,11 @@ paths:
           type: string
         in: path
       responses:
-        default:
+        404:
+          description: An object of type 'Land' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: "'Land' entity was successfully deleted."
       tags:
       - Land
@@ -1327,17 +2311,27 @@ paths:
     get:
       summary: Get 'MeasurementUnit' entities.
       parameters:
-      - $ref: '#/components/parameters/offsetParam'
-      - $ref: '#/components/parameters/limitParam'
+      - $ref: '#/components/parameters/pageParam'
+      - $ref: '#/components/parameters/sizeParam'
+      - $ref: '#/components/parameters/sortParam'
       responses:
+        400:
+          description: Bad Request
+        500:
+          description: Internal Server Error
         200:
+          description: An array of 'MeasurementUnit' objects.
           content:
             application/jsonld:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MeasurementUnit'
-          description: An array of 'MeasurementUnit' objects.
+                allOf:
+                - $ref: '#/components/schemas/HydraCollectionWrapper'
+                - type: object
+                  properties:
+                    hydra:member:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/MeasurementUnit'
       tags:
       - MeasurementUnit
     post:
@@ -1347,15 +2341,33 @@ paths:
         description: New 'MeasurementUnit' entity that is to be added.
         required: true
         schema:
-          $ref: '#/components/schemas/MeasurementUnit'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/MeasurementUnit'
         in: header
       responses:
-        200:
+        500:
+          description: Internal Server Error
+        400:
+          description: Bad Request
+        201:
+          description: Entity was successfully created (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/MeasurementUnit'
-          description: Entity was successfully created (new representation returned).
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/MeasurementUnit'
       tags:
       - MeasurementUnit
   /MeasurementUnit/{id}:
@@ -1369,12 +2381,23 @@ paths:
           type: string
         in: path
       responses:
+        404:
+          description: An object of type 'MeasurementUnit' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: A 'MeasurementUnit' object.
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/MeasurementUnit'
-          description: A 'MeasurementUnit' object.
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/MeasurementUnit'
       tags:
       - MeasurementUnit
     put:
@@ -1390,15 +2413,82 @@ paths:
         description: Updated data for 'MeasurementUnit' entity.
         required: true
         schema:
-          $ref: '#/components/schemas/MeasurementUnit'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/MeasurementUnit'
         in: header
       responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'MeasurementUnit' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: Entity was updated successfully (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/MeasurementUnit'
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/MeasurementUnit'
+      tags:
+      - MeasurementUnit
+    patch:
+      summary: Update a single property on a specific 'MeasurementUnit' object.
+      parameters:
+      - name: id
+        description: Id of 'MeasurementUnit' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: patch
+        description: A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.
+        required: true
+        schema:
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/MeasurementUnit'
+          - type: object
+            maxProperties: 2
+            minProperties: 2
+        in: header
+      responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'MeasurementUnit' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: Entity was updated successfully (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/MeasurementUnit'
       tags:
       - MeasurementUnit
     delete:
@@ -1411,7 +2501,11 @@ paths:
           type: string
         in: path
       responses:
-        default:
+        404:
+          description: An object of type 'MeasurementUnit' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: "'MeasurementUnit' entity was successfully deleted."
       tags:
       - MeasurementUnit
@@ -1419,22 +2513,33 @@ paths:
     get:
       summary: Get 'QuantityKind' entities.
       parameters:
-      - $ref: '#/components/parameters/offsetParam'
-      - $ref: '#/components/parameters/limitParam'
+      - $ref: '#/components/parameters/pageParam'
+      - $ref: '#/components/parameters/sizeParam'
+      - $ref: '#/components/parameters/sortParam'
       - name: qkMeasurementUnit
         description: Filter value on property 'qkMeasurementUnit'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       responses:
+        400:
+          description: Bad Request
+        500:
+          description: Internal Server Error
         200:
+          description: An array of 'QuantityKind' objects.
           content:
             application/jsonld:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/QuantityKind'
-          description: An array of 'QuantityKind' objects.
+                allOf:
+                - $ref: '#/components/schemas/HydraCollectionWrapper'
+                - type: object
+                  properties:
+                    hydra:member:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/QuantityKind'
       tags:
       - QuantityKind
     post:
@@ -1444,15 +2549,33 @@ paths:
         description: New 'QuantityKind' entity that is to be added.
         required: true
         schema:
-          $ref: '#/components/schemas/QuantityKind'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/QuantityKind'
         in: header
       responses:
-        200:
+        500:
+          description: Internal Server Error
+        400:
+          description: Bad Request
+        201:
+          description: Entity was successfully created (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/QuantityKind'
-          description: Entity was successfully created (new representation returned).
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/QuantityKind'
       tags:
       - QuantityKind
   /QuantityKind/{id}:
@@ -1466,12 +2589,23 @@ paths:
           type: string
         in: path
       responses:
+        404:
+          description: An object of type 'QuantityKind' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: A 'QuantityKind' object.
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/QuantityKind'
-          description: A 'QuantityKind' object.
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/QuantityKind'
       tags:
       - QuantityKind
     put:
@@ -1487,15 +2621,82 @@ paths:
         description: Updated data for 'QuantityKind' entity.
         required: true
         schema:
-          $ref: '#/components/schemas/QuantityKind'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/QuantityKind'
         in: header
       responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'QuantityKind' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: Entity was updated successfully (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/QuantityKind'
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/QuantityKind'
+      tags:
+      - QuantityKind
+    patch:
+      summary: Update a single property on a specific 'QuantityKind' object.
+      parameters:
+      - name: id
+        description: Id of 'QuantityKind' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: patch
+        description: A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.
+        required: true
+        schema:
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/QuantityKind'
+          - type: object
+            maxProperties: 2
+            minProperties: 2
+        in: header
+      responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'QuantityKind' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: Entity was updated successfully (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/QuantityKind'
       tags:
       - QuantityKind
     delete:
@@ -1508,7 +2709,11 @@ paths:
           type: string
         in: path
       responses:
-        default:
+        404:
+          description: An object of type 'QuantityKind' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: "'QuantityKind' entity was successfully deleted."
       tags:
       - QuantityKind
@@ -1516,22 +2721,33 @@ paths:
     get:
       summary: Get 'RealEstate' entities.
       parameters:
-      - $ref: '#/components/parameters/offsetParam'
-      - $ref: '#/components/parameters/limitParam'
+      - $ref: '#/components/parameters/pageParam'
+      - $ref: '#/components/parameters/sizeParam'
+      - $ref: '#/components/parameters/sortParam'
       - name: hasRealEstateComponent
         description: Filter value on property 'hasRealEstateComponent'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       responses:
+        400:
+          description: Bad Request
+        500:
+          description: Internal Server Error
         200:
+          description: An array of 'RealEstate' objects.
           content:
             application/jsonld:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/RealEstate'
-          description: An array of 'RealEstate' objects.
+                allOf:
+                - $ref: '#/components/schemas/HydraCollectionWrapper'
+                - type: object
+                  properties:
+                    hydra:member:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/RealEstate'
       tags:
       - RealEstate
     post:
@@ -1541,15 +2757,33 @@ paths:
         description: New 'RealEstate' entity that is to be added.
         required: true
         schema:
-          $ref: '#/components/schemas/RealEstate'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/RealEstate'
         in: header
       responses:
-        200:
+        500:
+          description: Internal Server Error
+        400:
+          description: Bad Request
+        201:
+          description: Entity was successfully created (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/RealEstate'
-          description: Entity was successfully created (new representation returned).
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/RealEstate'
       tags:
       - RealEstate
   /RealEstate/{id}:
@@ -1563,12 +2797,23 @@ paths:
           type: string
         in: path
       responses:
+        404:
+          description: An object of type 'RealEstate' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: A 'RealEstate' object.
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/RealEstate'
-          description: A 'RealEstate' object.
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/RealEstate'
       tags:
       - RealEstate
     put:
@@ -1584,15 +2829,82 @@ paths:
         description: Updated data for 'RealEstate' entity.
         required: true
         schema:
-          $ref: '#/components/schemas/RealEstate'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/RealEstate'
         in: header
       responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'RealEstate' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: Entity was updated successfully (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/RealEstate'
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/RealEstate'
+      tags:
+      - RealEstate
+    patch:
+      summary: Update a single property on a specific 'RealEstate' object.
+      parameters:
+      - name: id
+        description: Id of 'RealEstate' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: patch
+        description: A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.
+        required: true
+        schema:
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/RealEstate'
+          - type: object
+            maxProperties: 2
+            minProperties: 2
+        in: header
+      responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'RealEstate' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: Entity was updated successfully (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/RealEstate'
       tags:
       - RealEstate
     delete:
@@ -1605,7 +2917,11 @@ paths:
           type: string
         in: path
       responses:
-        default:
+        404:
+          description: An object of type 'RealEstate' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: "'RealEstate' entity was successfully deleted."
       tags:
       - RealEstate
@@ -1613,22 +2929,33 @@ paths:
     get:
       summary: Get 'RealEstateComponent' entities.
       parameters:
-      - $ref: '#/components/parameters/offsetParam'
-      - $ref: '#/components/parameters/limitParam'
+      - $ref: '#/components/parameters/pageParam'
+      - $ref: '#/components/parameters/sizeParam'
+      - $ref: '#/components/parameters/sortParam'
       - name: isPartOfRealEstate
         description: Filter value on property 'isPartOfRealEstate'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       responses:
+        400:
+          description: Bad Request
+        500:
+          description: Internal Server Error
         200:
+          description: An array of 'RealEstateComponent' objects.
           content:
             application/jsonld:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/RealEstateComponent'
-          description: An array of 'RealEstateComponent' objects.
+                allOf:
+                - $ref: '#/components/schemas/HydraCollectionWrapper'
+                - type: object
+                  properties:
+                    hydra:member:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/RealEstateComponent'
       tags:
       - RealEstateComponent
     post:
@@ -1638,15 +2965,33 @@ paths:
         description: New 'RealEstateComponent' entity that is to be added.
         required: true
         schema:
-          $ref: '#/components/schemas/RealEstateComponent'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/RealEstateComponent'
         in: header
       responses:
-        200:
+        500:
+          description: Internal Server Error
+        400:
+          description: Bad Request
+        201:
+          description: Entity was successfully created (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/RealEstateComponent'
-          description: Entity was successfully created (new representation returned).
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/RealEstateComponent'
       tags:
       - RealEstateComponent
   /RealEstateComponent/{id}:
@@ -1660,12 +3005,23 @@ paths:
           type: string
         in: path
       responses:
+        404:
+          description: An object of type 'RealEstateComponent' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: A 'RealEstateComponent' object.
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/RealEstateComponent'
-          description: A 'RealEstateComponent' object.
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/RealEstateComponent'
       tags:
       - RealEstateComponent
     put:
@@ -1681,15 +3037,82 @@ paths:
         description: Updated data for 'RealEstateComponent' entity.
         required: true
         schema:
-          $ref: '#/components/schemas/RealEstateComponent'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/RealEstateComponent'
         in: header
       responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'RealEstateComponent' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: Entity was updated successfully (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/RealEstateComponent'
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/RealEstateComponent'
+      tags:
+      - RealEstateComponent
+    patch:
+      summary: Update a single property on a specific 'RealEstateComponent' object.
+      parameters:
+      - name: id
+        description: Id of 'RealEstateComponent' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: patch
+        description: A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.
+        required: true
+        schema:
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/RealEstateComponent'
+          - type: object
+            maxProperties: 2
+            minProperties: 2
+        in: header
+      responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'RealEstateComponent' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: Entity was updated successfully (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/RealEstateComponent'
       tags:
       - RealEstateComponent
     delete:
@@ -1702,7 +3125,11 @@ paths:
           type: string
         in: path
       responses:
-        default:
+        404:
+          description: An object of type 'RealEstateComponent' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: "'RealEstateComponent' entity was successfully deleted."
       tags:
       - RealEstateComponent
@@ -1710,37 +3137,51 @@ paths:
     get:
       summary: Get 'Room' entities.
       parameters:
-      - $ref: '#/components/parameters/offsetParam'
-      - $ref: '#/components/parameters/limitParam'
-      - name: containsMountedDevice
-        description: Filter value on property 'containsMountedDevice'.
+      - $ref: '#/components/parameters/pageParam'
+      - $ref: '#/components/parameters/sizeParam'
+      - $ref: '#/components/parameters/sortParam'
+      - name: isPartOfBuilding
+        description: Filter value on property 'isPartOfBuilding'.
         schema:
-          type: string
-        in: query
-      - name: hasSubBuildingComponent
-        description: Filter value on property 'hasSubBuildingComponent'.
-        schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       - name: hasSuperBuildingComponent
         description: Filter value on property 'hasSuperBuildingComponent'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
-      - name: isPartOfBuilding
-        description: Filter value on property 'isPartOfBuilding'.
+      - name: containsMountedDevice
+        description: Filter value on property 'containsMountedDevice'.
         schema:
-          type: string
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
+        in: query
+      - name: hasSubBuildingComponent
+        description: Filter value on property 'hasSubBuildingComponent'.
+        schema:
+          $ref: '#/components/schemas/StringFilter'
+        style: deepObject
         in: query
       responses:
+        400:
+          description: Bad Request
+        500:
+          description: Internal Server Error
         200:
+          description: An array of 'Room' objects.
           content:
             application/jsonld:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Room'
-          description: An array of 'Room' objects.
+                allOf:
+                - $ref: '#/components/schemas/HydraCollectionWrapper'
+                - type: object
+                  properties:
+                    hydra:member:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Room'
       tags:
       - Room
     post:
@@ -1750,15 +3191,33 @@ paths:
         description: New 'Room' entity that is to be added.
         required: true
         schema:
-          $ref: '#/components/schemas/Room'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Room'
         in: header
       responses:
-        200:
+        500:
+          description: Internal Server Error
+        400:
+          description: Bad Request
+        201:
+          description: Entity was successfully created (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Room'
-          description: Entity was successfully created (new representation returned).
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Room'
       tags:
       - Room
   /Room/{id}:
@@ -1772,12 +3231,23 @@ paths:
           type: string
         in: path
       responses:
+        404:
+          description: An object of type 'Room' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: A 'Room' object.
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Room'
-          description: A 'Room' object.
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Room'
       tags:
       - Room
     put:
@@ -1793,15 +3263,82 @@ paths:
         description: Updated data for 'Room' entity.
         required: true
         schema:
-          $ref: '#/components/schemas/Room'
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Room'
         in: header
       responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'Room' with the specified ID was not found.
+        500:
+          description: Internal Server Error
         200:
+          description: Entity was updated successfully (new representation returned).
           content:
             application/jsonld:
               schema:
-                $ref: '#/components/schemas/Room'
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Room'
+      tags:
+      - Room
+    patch:
+      summary: Update a single property on a specific 'Room' object.
+      parameters:
+      - name: id
+        description: Id of 'Room' to update.
+        required: true
+        schema:
+          type: string
+        in: path
+      - name: patch
+        description: A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.
+        required: true
+        schema:
+          allOf:
+          - type: object
+            required:
+            - '@context'
+            properties:
+              '@context':
+                $ref: '#/components/schemas/Context'
+          - $ref: '#/components/schemas/Room'
+          - type: object
+            maxProperties: 2
+            minProperties: 2
+        in: header
+      responses:
+        400:
+          description: Bad Request
+        404:
+          description: An object of type 'Room' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: Entity was updated successfully (new representation returned).
+          content:
+            application/jsonld:
+              schema:
+                allOf:
+                - type: object
+                  required:
+                  - '@context'
+                  properties:
+                    '@context':
+                      $ref: '#/components/schemas/Context'
+                - $ref: '#/components/schemas/Room'
       tags:
       - Room
     delete:
@@ -1814,9 +3351,16 @@ paths:
           type: string
         in: path
       responses:
-        default:
+        404:
+          description: An object of type 'Room' with the specified ID was not found.
+        500:
+          description: Internal Server Error
+        200:
           description: "'Room' entity was successfully deleted."
       tags:
       - Room
 servers:
 - url: http://localhost:8080/
+
+
+

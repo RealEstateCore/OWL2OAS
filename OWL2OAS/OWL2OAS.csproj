@@ -19,18 +19,6 @@
     <PackageReference Include="YamlDotNet" Version="6.1.2" />
     <PackageReference Include="CommandLineParser" Version="2.6.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="examples\rec-core-v3.0.rdf" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="examples\" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="examples\rec-core-v3.0.rdf">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
