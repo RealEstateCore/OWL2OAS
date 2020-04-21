@@ -306,7 +306,16 @@ namespace OWL2OAS
                 required = new List<string>()
             };
 
-            // Add each imported ontology to the @context
+            OASDocument.PrimitiveSchema rootOntologySchema = new OASDocument.PrimitiveSchema
+            {
+                type = "string",
+                format = "uri",
+                Enumeration = new string[] { rootOntology.GetVersionOrOntologyIri().ToString() }
+            };
+            loadedOntologiesSchema.properties.Add("", rootOntologySchema);
+            loadedOntologiesSchema.required.Add("");
+
+            // Add each imported ontology to the loaded ontologies schema
             foreach (Ontology importedOntology in importedOntologies)
             {
                 OASDocument.PrimitiveSchema importedOntologySchema = new OASDocument.PrimitiveSchema
