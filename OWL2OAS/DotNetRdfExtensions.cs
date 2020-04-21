@@ -345,17 +345,28 @@ namespace OWL2OAS
             IUriNode onProperty = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#onProperty"));
             IEnumerable<IUriNode> propertyNodes = cls.SuperClasses.Where(superClass => superClass.IsRestriction())
                 .SelectMany(restriction => restriction.GetNodesViaProperty(onProperty)).UriNodes();
-            return propertyNodes.SelectMany(node => graph.OwlProperties.Where(oProperty => oProperty.Resource.Equals(node)));
+            return propertyNodes.Select(node => graph.CreateOntologyProperty(node));
+            //return propertyNodes.SelectMany(node => graph.OwlProperties.Where(oProperty => oProperty.Resource.Equals(node)));
         }
 
         public static IEnumerable<OntologyProperty> IsExhaustiveDomainOf(this OntologyClass oClass)
         {
-            IEnumerable<OntologyProperty> directDomainProperties = oClass.IsDomainOf;
-            IEnumerable<OntologyProperty> indirectDomainProperties = oClass.SuperClasses.SelectMany(cls => cls.IsDomainOf);
+            IEnumerable<OntologyProperty> indirectScopedDomainProperties = oClass.SuperClasses.SelectMany(cls => cls.IsScopedDomainOf());
             IEnumerable<OntologyProperty> scopedDomainProperties = oClass.IsScopedDomainOf();
-            IEnumerable<OntologyProperty> allDomainProperties = directDomainProperties.Union(indirectDomainProperties).Union(scopedDomainProperties);
+            IEnumerable<OntologyProperty> indirectDomainProperties = oClass.SuperClasses.SelectMany(cls => cls.IsDomainOf);
+            IEnumerable<OntologyProperty> directDomainProperties = oClass.IsDomainOf;
+            // The order is intentional -- the restrictions come before rdfs:domains, and more generic ones go first
+            IEnumerable<OntologyProperty> allDomainProperties = indirectScopedDomainProperties.Union(scopedDomainProperties).Union(indirectDomainProperties).Union(directDomainProperties);
             return allDomainProperties.Distinct(new OntologyResourceComparer()).Select(ontResource => ontResource as OntologyProperty);
         }
+
+        public static IEnumerable<OntologyProperty> IsExhaustiveDomainOfUniques(this OntologyClass oClass)
+        {
+            IEnumerable<OntologyProperty> allProperties = oClass.IsExhaustiveDomainOf();
+            IEnumerable<OntologyProperty> allUniqueProperties = allProperties.GroupBy(property => property.GetIri().ToString()).Select(group => group.First());
+            return allUniqueProperties;
+        }
+
         #endregion
 
         #region OntologyProperty extensions

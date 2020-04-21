@@ -73,6 +73,17 @@ namespace OWL2OAS
         private static Ontology rootOntology;
 
         /// <summary>
+        /// The joint ontology graph into which all imported ontologies are merged
+        /// and upon which this tool subsequently operates.
+        /// </summary>
+        private static readonly OntologyGraph _ontologyGraph = new OntologyGraph();
+
+        /// <summary>
+        /// The generated output OAS document.
+        /// </summary>
+        private static OASDocument _document;
+
+        /// <summary>
         /// Set of transitively imported child ontologies.
         /// </summary>
         private static readonly HashSet<Ontology> importedOntologies = new HashSet<Ontology>(new OntologyComparer());
@@ -204,20 +215,19 @@ namespace OWL2OAS
             UriLoader.Cache.Clear();
 
             // Load ontology graph from local or remote path
-            OntologyGraph rootOntologyGraph = new OntologyGraph();
             if (_localOntology)
             {
-                FileLoader.Load(rootOntologyGraph, _ontologyPath);
+                FileLoader.Load(_ontologyGraph, _ontologyPath);
             }
             else
             {
-                UriLoader.Load(rootOntologyGraph, new Uri(_ontologyPath));
+                UriLoader.Load(_ontologyGraph, new Uri(_ontologyPath));
             }
 
             // Get the main ontology defined in the graph.
-            rootOntology = rootOntologyGraph.GetOntology();
+            rootOntology = _ontologyGraph.GetOntology();
 
-            // If configured for it, parse owl:Imports
+            // If configured for it, parse owl:Imports transitively
             if (!_noImports)
             {
                 foreach (Ontology import in rootOntology.Imports)
@@ -227,7 +237,7 @@ namespace OWL2OAS
             }
 
             // Create OAS object, create OAS info header, server block, (empty) components/schemas structure, and LoadedOntologies endpoint
-            OASDocument document = new OASDocument
+            _document = new OASDocument
             {
                 info = GenerateDocumentInfo(),
                 servers = new List<Dictionary<string, string>> { new Dictionary<string, string> { { "url", _server } } },
@@ -238,24 +248,25 @@ namespace OWL2OAS
                 }
             };
 
-            // Generate and add the Context schema
-            document.components.schemas.Add("Context", GenerateContextSchema());
-
             // Parse OWL classes.For each class, create a schema and a path
-            GenerateAtomicClassSchemas(rootOntologyGraph, document);
-            GenerateClassPaths(rootOntologyGraph, document);
+            GenerateAtomicClassSchemas();
+            GenerateClassPaths();
 
-            // Also parse classes in imports
-            foreach (Ontology importedOntology in importedOntologies)
-            {
-                GenerateAtomicClassSchemas(importedOntology.Graph as OntologyGraph, document);
-                GenerateClassPaths(importedOntology.Graph as OntologyGraph, document);
-            }
+            // Generate and add the Context schema
+            // This is done after class schemas are generated, in case the former causes new prefixes to be added
+            // to the context
+            _document.components.schemas.Add("Context", GenerateContextSchema());
 
             // Dispose all open graphs
-            rootOntologyGraph.Dispose();
+            _ontologyGraph.Dispose();
 
-            DumpAsYaml(document);
+            // Dump output as YAML
+            var stringBuilder = new StringBuilder();
+            var serializerBuilder = new SerializerBuilder().DisableAliases();
+            var serializer = serializerBuilder.Build();
+            stringBuilder.AppendLine(serializer.Serialize(_document));
+            Console.WriteLine(stringBuilder);
+            Console.WriteLine("");
         }
 
         private static OASDocument.Path GenerateLoadedOntologiesPath()
@@ -321,13 +332,20 @@ namespace OWL2OAS
             {
                 type = "string",
                 format = "uri",
-                DefaultValue = "http://www.w3.org/ns/hydra/core#"
+                DefaultValue = rootOntology.GetIri().ToString()
             };
             // Set @context/@base (default data namespace)
             OASDocument.PrimitiveSchema baseNamespaceSchema = new OASDocument.PrimitiveSchema
             {
                 type = "string",
                 format = "uri"
+            };
+            // Hardcoded Hydra
+            OASDocument.PrimitiveSchema hydraSchema = new OASDocument.PrimitiveSchema
+            {
+                type = "string",
+                format = "uri",
+                DefaultValue = "http://www.w3.org/ns/hydra/core#"
             };
             // Hardcoded rdfs:label for @context
             OASDocument.PrimitiveSchema labelContextSchema = new OASDocument.PrimitiveSchema
@@ -339,10 +357,11 @@ namespace OWL2OAS
             // Mash it all together into a @context block
             OASDocument.ComplexSchema contextSchema = new OASDocument.ComplexSchema
             {
-                required = new List<string> { "@vocab", "@base", "label" },
+                required = new List<string> { "@vocab", "@base", "hydra" },
                 properties = new Dictionary<string, OASDocument.Schema> {
                     { "@vocab", vocabularySchema },
                     { "@base", baseNamespaceSchema },
+                    { "hydra", hydraSchema },
                     { "label", labelContextSchema }
                 }
             };
@@ -411,35 +430,52 @@ namespace OWL2OAS
             return docInfo;
         }
 
-        private static string GetKeyNameForResource(OntologyGraph graph, OntologyResource cls)
+        private static string GetKeyNameForResource(OntologyResource resource)
         {
-            if (graph.Equals(rootOntology.Graph))
+            if (!resource.IsNamed())
             {
-                return cls.GetLocalName();
+                throw new RdfException($"Could not generate key name for OntologyResource '{resource}'; resource is anonymous.");
             }
-            string prefix = importedOntologies.First(ontology => ontology.Graph.Equals(graph)).GetShortName();
-            string localName = cls.GetLocalName();
-            return $"{prefix}:{localName}";
+
+            Uri resourceNamespace = resource.GetNamespace();
+
+            // If the concept is defined in the root ontology (which is default @vocab), return the local identifier
+            if (resourceNamespace.Equals(rootOntology.GetIri()))
+            {
+                return resource.GetLocalName();
+            }
+
+            // If the resource is in an ontology that has been parsed and thus added to known namespace prefixes, return prefixed qname
+            if (namespacePrefixes.ContainsKey(resourceNamespace))
+            {
+                return $"{namespacePrefixes[resourceNamespace]}:{resource.GetLocalName()}";
+            }
+
+            // Fallback option -- add this thing to the namespace mapper and return it
+            char[] trimChars = { '#', '/' };
+            string namespaceShortName = resourceNamespace.ToString().Trim(trimChars).Split('/').Last();
+            namespacePrefixes[resourceNamespace] = namespaceShortName;
+            return $"{namespacePrefixes[resourceNamespace]}:{resource.GetLocalName()}";
         }
 
-        private static string GetEndpointName(OntologyGraph graph, OntologyResource cls)
+        private static string GetEndpointName(OntologyResource cls)
         {
-            IUriNode endpoint = graph.CreateUriNode(VocabularyHelper.O2O.endpoint);
+            IUriNode endpoint = _ontologyGraph.CreateUriNode(VocabularyHelper.O2O.endpoint);
             IEnumerable<ILiteralNode> endpoints = cls.GetNodesViaProperty(endpoint).LiteralNodes();
             if (endpoints.Any())
             {
                 return endpoints.First().AsValuedNode().AsString();
             }
-            return GetKeyNameForResource(graph, cls);
+            return GetKeyNameForResource(cls);
         }
 
-        private static void GenerateAtomicClassSchemas(OntologyGraph graph, OASDocument document)
+        private static void GenerateAtomicClassSchemas()
         {
             // Iterate over all classes
-            foreach (OntologyClass oClass in graph.OwlClasses.Where(oClass => oClass.IsNamed() && IsIncluded(oClass)))
+            foreach (OntologyClass oClass in _ontologyGraph.OwlClasses.Where(oClass => oClass.IsNamed() && IsIncluded(oClass)))
             {
                 // Get key name for API
-                string classLabel = GetKeyNameForResource(graph, oClass);
+                string classLabel = GetKeyNameForResource(oClass);
 
                 // Create schema for class and corresponding properties dict
                 OASDocument.ComplexSchema schema = new OASDocument.ComplexSchema();
@@ -501,7 +537,7 @@ namespace OWL2OAS
                 OASDocument.PrimitiveSchema typeSchema = new OASDocument.PrimitiveSchema
                 {
                     type = "string",
-                    DefaultValue = GetPrefixedOrFullName(oClass)
+                    DefaultValue = GetKeyNameForResource(oClass)
                 };
                 schema.properties.Add("@type", typeSchema);
 
@@ -514,8 +550,8 @@ namespace OWL2OAS
                 schema.properties.Add("label", labelSchema);
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
-                IEnumerable<OntologyProperty> allProperties = oClass.IsExhaustiveDomainOf();
-                foreach (OntologyProperty property in allProperties.Where(prop => IsIncluded(prop)))
+                IEnumerable<OntologyProperty> allUniqueProperties = oClass.IsExhaustiveDomainOfUniques();
+                foreach (OntologyProperty property in allUniqueProperties.Where(prop => IsIncluded(prop)))
                 {
                     // We only process (named) object and data properties with singleton ranges.
                     if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1)
@@ -524,7 +560,7 @@ namespace OWL2OAS
                         UriNode propertyNode = ((UriNode)property.Resource);
 
                         // Used to allocate property to schema.properties dictionary
-                        string propertyLabel = GetKeyNameForResource(graph, property);
+                        string propertyLabel = GetKeyNameForResource(property);
 
                         // The return value: a property block to be added to the output document
                         OASDocument.Schema outputSchema;
@@ -575,7 +611,7 @@ namespace OWL2OAS
                                 {
                                     properties = new Dictionary<string, OASDocument.Schema> {
                                         { "@id", new OASDocument.PrimitiveSchema { type = "string" } },
-                                        { "@type", new OASDocument.PrimitiveSchema { type = "string", DefaultValue = GetPrefixedOrFullName(range) } }
+                                        { "@type", new OASDocument.PrimitiveSchema { type = "string", DefaultValue = GetKeyNameForResource(range) } }
                                     },
                                     required = new List<string> { "@id" }
                                 };
@@ -623,42 +659,26 @@ namespace OWL2OAS
                         }
                     }
                 }
-                document.components.schemas.Add(classLabel, schema);
+                _document.components.schemas.Add(classLabel, schema);
             }
         }
 
-        private static string GetPrefixedOrFullName(OntologyResource resource)
-        {
-            if (!resource.IsNamed())
-            {
-                throw new RdfException($"Resource '{resource.ToString()}' is anonymous.");
-            }
-            // Fall back to full URI name, in case qname cannot be generated
-            string resourceName = resource.GetIri().ToString();
-            Uri resourceNamespace = resource.GetNamespace();
-            if (namespacePrefixes.ContainsKey(resourceNamespace))
-            {
-                resourceName = $"{namespacePrefixes[resourceNamespace]}:{resource.GetLocalName()}";
-            }
-            return resourceName;
-        }
-
-        private static void GenerateClassPaths(OntologyGraph graph, OASDocument document)
+        private static void GenerateClassPaths()
         {
             // Iterate over all classes
-            foreach (OntologyClass oClass in graph.OwlClasses.Where(oClass => oClass.IsNamed() && IsIncluded(oClass)))
+            foreach (OntologyClass oClass in _ontologyGraph.OwlClasses.Where(oClass => oClass.IsNamed() && IsIncluded(oClass)))
             {
                 // Get key name for API
-                string classLabel = GetKeyNameForResource(graph, oClass);
-                string endpointName = GetEndpointName(graph, oClass);
+                string classLabel = GetKeyNameForResource(oClass);
+                string endpointName = GetEndpointName(oClass);
 
                 // Create paths and corresponding operations for class
-                document.paths.Add($"/{endpointName}", new OASDocument.Path
+                _document.paths.Add($"/{endpointName}", new OASDocument.Path
                 {
                     get = GenerateGetEntitiesOperation(endpointName, classLabel, oClass),
                     post = GeneratePostEntityOperation(endpointName, classLabel)
                 });
-                document.paths.Add($"/{endpointName}/{{id}}", new OASDocument.Path
+                _document.paths.Add($"/{endpointName}/{{id}}", new OASDocument.Path
                 {
                     get = GenerateGetEntityByIdOperation(endpointName, classLabel),
                     patch = GeneratePatchToIdOperation(endpointName, classLabel),
@@ -801,12 +821,12 @@ namespace OWL2OAS
             getOperation.parameters.Add(new OASDocument.Parameter { ReferenceTo = "sortParam" });
 
             // Add parameters for each property field that can be expressed on this class
-            foreach (OntologyProperty property in oClass.IsExhaustiveDomainOf()
+            foreach (OntologyProperty property in oClass.IsExhaustiveDomainOfUniques()
             .Where(property => property.IsDataProperty() || property.IsObjectProperty())
             .Where(property => property.Ranges.Count() == 1)
             .Where(property => IsIncluded(property)))
             {
-                string propertyLabel = GetKeyNameForResource(property.OntologyGraph(), property);
+                string propertyLabel = GetKeyNameForResource(property);
 
                 // Fall back to string representation and no format for object properties
                 // abd data properties w/ unknown types
@@ -918,7 +938,7 @@ namespace OWL2OAS
                     {
                         properties = new Dictionary<string, OASDocument.Schema>
                         {
-                            {"member", new OASDocument.ArraySchema  {
+                            {"hydra:member", new OASDocument.ArraySchema  {
                                 items = classSchemaWithRequiredProperties
                             } }
                         }
@@ -1136,16 +1156,6 @@ namespace OWL2OAS
             return putOperation;
         }
 
-        private static void DumpAsYaml(object data)
-        {
-            var stringBuilder = new StringBuilder();
-            var serializerBuilder = new SerializerBuilder().DisableAliases();
-            var serializer = serializerBuilder.Build();
-            stringBuilder.AppendLine(serializer.Serialize(data));
-            Console.WriteLine(stringBuilder);
-            Console.WriteLine("");
-        }
-
         private static int GetMinCardinality(OntologyClass restriction)
         {
             OntologyGraph graph = restriction.Graph as OntologyGraph;
@@ -1275,6 +1285,9 @@ namespace OWL2OAS
                             i++;
                         }
                         namespacePrefixes.Add(importedOntologyFromFetchedGraph.GetIri(), importedOntologyShortname);
+
+                        // Merge the fetch graph with the joint ontology graph the tool operates on
+                        _ontologyGraph.Merge(fetchedOntologyGraph);
 
                         // Add imported ontology to the global imports collection and traverse its 
                         // import hierarchy transitively

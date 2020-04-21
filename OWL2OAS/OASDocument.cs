@@ -116,23 +116,23 @@ namespace OWL2OAS
                         {
                             "@context",
                             "@type",
-                            "member"
+                            "hydra:member"
                         },
                         properties = new Dictionary<string, OASDocument.Schema>
                         {
                             {"@context", new ReferenceSchema("Context") },
-                            {"@type", new PrimitiveSchema { type="string", DefaultValue="Collection"} },
-                            {"totalItems", new PrimitiveSchema { type="integer" } },
-                            {"view", new ComplexSchema
+                            {"@type", new PrimitiveSchema { type="string", DefaultValue="hydra:Collection"} },
+                            {"hydra:totalItems", new PrimitiveSchema { type="integer" } },
+                            {"hydra:view", new ComplexSchema
                             {
                                 properties = new Dictionary<string, Schema>
                                 {
                                     {"@id", new PrimitiveSchema { type="string", format="uri"} },
-                                    {"@type", new PrimitiveSchema { type="string", DefaultValue="PartialCollectionView"} },
-                                    {"first", new PrimitiveSchema { type="string"} },
-                                    {"previous", new PrimitiveSchema { type="string"} },
-                                    {"next", new PrimitiveSchema { type="string"} },
-                                    {"last", new PrimitiveSchema { type="string"} },
+                                    {"@type", new PrimitiveSchema { type="string", DefaultValue="hydra:PartialCollectionView"} },
+                                    {"hydra:first", new PrimitiveSchema { type="string"} },
+                                    {"hydra:previous", new PrimitiveSchema { type="string"} },
+                                    {"hydra:next", new PrimitiveSchema { type="string"} },
+                                    {"hydra:last", new PrimitiveSchema { type="string"} },
                                 }
                             } }
                         }
