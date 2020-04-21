@@ -2,7 +2,7 @@
   "profiles": {
     "OWL2OAS": {
       "commandName": "Project",
-      "commandLineArgs": "-c DefaultExclude -u https://w3id.org/rec/full/3.2/ > %HOMEPATH%/OWL2OAS_OUTPUT.yaml"
+      "commandLineArgs": "-c DefaultExclude -u https://w3id.org/rec/full/3.1.1/ > %HOMEPATH%/OWL2OAS_OUTPUT.yaml"
     }
   }
 }

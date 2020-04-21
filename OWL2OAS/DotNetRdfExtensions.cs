@@ -376,7 +376,8 @@ namespace OWL2OAS
 
         public static bool IsFunctional(this OntologyProperty property)
         {
-            return property.Types.UriNodes().Any(propertyType => propertyType.Uri.Equals(VocabularyHelper.OWL.FunctionalProperty));
+            // Note the toString-based comparison; because .NET Uri class does not differentiate by Uri fragment!
+            return property.Types.UriNodes().Any(propertyType => propertyType.Uri.ToString().Equals(VocabularyHelper.OWL.FunctionalProperty.ToString()));
         }
 
         public static IEnumerable<OntologyProperty> DataProperties(this IEnumerable<OntologyProperty> properties)
