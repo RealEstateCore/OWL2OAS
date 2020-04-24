@@ -67,14 +67,14 @@ namespace OWL2OAS
                 { "pageParam", new Parameter
                     {
                         name = "page",
-                        description = "If the result set is large, pagination across the results can be employed; in that case, this parameter defines the page number that is requested by the client. The number of items included in each page is defined by the 'size' parameter. Default is 1, i.e., the first results page is returned.",
+                        description = "If the result set is large, pagination across the results can be employed; in that case, this parameter defines the page number (zero-indexed) that is requested by the client. The number of items included in each page is defined by the 'size' parameter. Default is 0, i.e., the first results page is returned.",
                         InField = Parameter.InFieldValues.query,
                         required = false,
                         schema = new PrimitiveSchema {
                             type = "integer",
                             format = "int32",
-                            minimum = 1,
-                            DefaultValue = "1"
+                            minimum = "0",
+                            DefaultValue = "0"
                         }
                     }
                 },
@@ -88,7 +88,7 @@ namespace OWL2OAS
                         schema = new PrimitiveSchema {
                             type = "integer",
                             format = "int32",
-                            minimum = 0,
+                            minimum = "0",
                             maximum = 100,
                             DefaultValue = "20"
                         }
@@ -207,7 +207,7 @@ namespace OWL2OAS
         {
             public string type;
             public string format;
-            public int minimum;
+            public string minimum;
             public int maximum;
             [YamlMember(Alias = "default")]
             public string DefaultValue { get; set; }
