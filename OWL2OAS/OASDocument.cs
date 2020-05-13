@@ -251,8 +251,16 @@ namespace OWL2OAS
         {
             public string summary;
             public List<Parameter> parameters = new List<Parameter>();
+            public RequestBody requestBody;
             public Dictionary<string, Response> responses = new Dictionary<string, Response>();
             public List<string> tags = new List<string>();
+        }
+
+        public class RequestBody
+        {
+            public string description;
+            public bool required;
+            public Dictionary<string, Content> content;
         }
 
         public class Response

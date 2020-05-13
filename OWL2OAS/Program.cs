@@ -738,15 +738,22 @@ namespace OWL2OAS
             postOperation.summary = $"Create a new '{classLabel}' object.";
             postOperation.tags.Add(endpointName);
 
-            OASDocument.Parameter bodyParameter = new OASDocument.Parameter
+            // Create request body
+            OASDocument.RequestBody body = new OASDocument.RequestBody
             {
-                name = "entity",
                 description = $"New '{classLabel}' entity that is to be added.",
-                InField = OASDocument.Parameter.InFieldValues.header,
                 required = true,
-                schema = MergeAtomicSchemaWithContext(classLabel)
+                content = new Dictionary<string, OASDocument.Content>
+                {
+                    {
+                        "application/json", new OASDocument.Content
+                        {
+                            schema = MergeAtomicSchemaWithContext(classLabel)
+                        }
+                    }
+                }
             };
-            postOperation.parameters.Add(bodyParameter);
+            postOperation.requestBody = body;
 
             // Create each of the HTTP response types
             OASDocument.Response response500 = new OASDocument.Response();
@@ -1054,7 +1061,9 @@ namespace OWL2OAS
                     type = "string"
                 }
             };
+            patchOperation.parameters.Add(idParameter);
 
+            // Create patch schema
             OASDocument.ReferenceSchema contextReferenceSchema = new OASDocument.ReferenceSchema("Context");
             OASDocument.ComplexSchema contextPropertySchema = new OASDocument.ComplexSchema
             {
@@ -1062,15 +1071,9 @@ namespace OWL2OAS
                 properties = new Dictionary<string, OASDocument.Schema>() { { "@context", contextReferenceSchema } }
             };
 
-            OASDocument.Parameter bodyParameter = new OASDocument.Parameter
+            OASDocument.Schema patchSchema = new OASDocument.AllOfSchema
             {
-                name = "patch",
-                description = "A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.",
-                InField = OASDocument.Parameter.InFieldValues.header,
-                required = true,
-                schema = new OASDocument.AllOfSchema
-                {
-                    allOf = new OASDocument.Schema[] {
+                allOf = new OASDocument.Schema[] {
                         contextPropertySchema,
                         new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel)),
                         new OASDocument.ComplexSchema {
@@ -1078,11 +1081,25 @@ namespace OWL2OAS
                             maxProperties = 2
                         }
                     }
+            };
+
+            // Add request body
+            OASDocument.RequestBody body = new OASDocument.RequestBody
+            {
+                description = "A single JSON key-value pair (plus @context), indicating the property to update and its new value. Note that the Swagger UI does not properly show the size constraint on this parameter; but the underlying OpenAPI Specification document does.",
+                required = true,
+                content = new Dictionary<string, OASDocument.Content>
+                {
+                    {
+                        "application/json", new OASDocument.Content
+                        {
+                            schema = patchSchema
+                        }
+                    }
                 }
             };
-            patchOperation.parameters.Add(idParameter);
-            patchOperation.parameters.Add(bodyParameter);
-
+            patchOperation.requestBody = body;
+            
             // Create each of the HTTP response types
             OASDocument.Response response400 = new OASDocument.Response();
             response400.description = "Bad Request";
@@ -1127,16 +1144,24 @@ namespace OWL2OAS
                     type = "string"
                 }
             };
-            OASDocument.Parameter bodyParameter = new OASDocument.Parameter
-            {
-                name = "entity",
-                description = $"Updated data for '{classLabel}' entity.",
-                InField = OASDocument.Parameter.InFieldValues.header,
-                required = true,
-                schema = MergeAtomicSchemaWithContext(classLabel)
-            };
             putOperation.parameters.Add(idParameter);
-            putOperation.parameters.Add(bodyParameter);
+
+            // Add request body
+            OASDocument.RequestBody body = new OASDocument.RequestBody
+            {
+                description = $"Updated data for '{classLabel}' entity.",
+                required = true,
+                content = new Dictionary<string, OASDocument.Content>
+                {
+                    {
+                        "application/json", new OASDocument.Content
+                        {
+                            schema = MergeAtomicSchemaWithContext(classLabel)
+                        }
+                    }
+                }
+            };
+            putOperation.requestBody = body;
 
             // Create each of the HTTP response types
             OASDocument.Response response400 = new OASDocument.Response();
