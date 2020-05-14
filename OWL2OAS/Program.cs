@@ -746,7 +746,7 @@ namespace OWL2OAS
                 content = new Dictionary<string, OASDocument.Content>
                 {
                     {
-                        "application/json", new OASDocument.Content
+                        "application/ld+json", new OASDocument.Content
                         {
                             schema = MergeAtomicSchemaWithContext(classLabel)
                         }
@@ -770,7 +770,7 @@ namespace OWL2OAS
 
             response201.content = new Dictionary<string, OASDocument.Content>();
             OASDocument.Content content201 = new OASDocument.Content();
-            response201.content.Add("application/jsonld", content201);
+            response201.content.Add("application/ld+json", content201);
 
             // Response is per previously defined schema
             content201.schema = MergeAtomicSchemaWithContextAndRequiredProperties(classLabel);
@@ -813,7 +813,7 @@ namespace OWL2OAS
 
             response200.content = new Dictionary<string, OASDocument.Content>();
             OASDocument.Content content200 = new OASDocument.Content();
-            response200.content.Add("application/jsonld", content200);
+            response200.content.Add("application/ld+json", content200);
 
             // Response is per previously defined schema
             content200.schema = MergeAtomicSchemaWithContextAndRequiredProperties(classLabel);
@@ -939,7 +939,7 @@ namespace OWL2OAS
 
             response200.content = new Dictionary<string, OASDocument.Content>();
             OASDocument.Content content200 = new OASDocument.Content();
-            response200.content.Add("application/jsonld", content200);
+            response200.content.Add("application/ld+json", content200);
 
             // Generate schema with required fields propped on via allOf (if any required fields exist)
             OASDocument.Schema classSchemaWithRequiredProperties = MergeAtomicSchemaWithRequiredProperties(classLabel);
@@ -1091,7 +1091,7 @@ namespace OWL2OAS
                 content = new Dictionary<string, OASDocument.Content>
                 {
                     {
-                        "application/json", new OASDocument.Content
+                        "application/ld+json", new OASDocument.Content
                         {
                             schema = patchSchema
                         }
@@ -1119,7 +1119,7 @@ namespace OWL2OAS
 
             response200.content = new Dictionary<string, OASDocument.Content>();
             OASDocument.Content content200 = new OASDocument.Content();
-            response200.content.Add("application/jsonld", content200);
+            response200.content.Add("application/ld+json", content200);
 
             // Response is per previously defined schema
             content200.schema = MergeAtomicSchemaWithContextAndRequiredProperties(classLabel);
@@ -1154,7 +1154,7 @@ namespace OWL2OAS
                 content = new Dictionary<string, OASDocument.Content>
                 {
                     {
-                        "application/json", new OASDocument.Content
+                        "application/ld+json", new OASDocument.Content
                         {
                             schema = MergeAtomicSchemaWithContext(classLabel)
                         }
@@ -1182,7 +1182,7 @@ namespace OWL2OAS
 
             response200.content = new Dictionary<string, OASDocument.Content>();
             OASDocument.Content content200 = new OASDocument.Content();
-            response200.content.Add("application/jsonld", content200);
+            response200.content.Add("application/ld+json", content200);
 
             // Response is per previously defined schema
             content200.schema = MergeAtomicSchemaWithContextAndRequiredProperties(classLabel);
