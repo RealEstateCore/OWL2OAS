@@ -7,7 +7,7 @@
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Default' ">
     <StartAction>Project</StartAction>
-    <StartArguments>-c DefaultExclude -u https://w3id.org/rec/full/3.1.2/</StartArguments>
+    <StartArguments>-c DefaultExclude -u https://w3id.org/rec/full/3.1.3/</StartArguments>
     <ExternalConsole>true</ExternalConsole>
   </PropertyGroup>
   <ItemGroup>
