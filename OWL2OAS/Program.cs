@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Web;
 using CommandLine;
 using VDS.RDF;
 using VDS.RDF.Nodes;
@@ -35,6 +35,8 @@ namespace OWL2OAS
             public string FilePath { get; set; }
             [Option('u', "uri-path", Required = true, HelpText = "The URI of the root ontology file to translate.", SetName = "uriOntology")]
             public string UriPath { get; set; }
+            [Option('o', "outputPath", Required = true, HelpText = "The path at which to put the generated OAS file.")]
+            public string OutputPath { get; set; }
         }
 
         /// <summary>
@@ -102,6 +104,7 @@ namespace OWL2OAS
         private static string _ontologyPath;
         private static bool _defaultIncludeClasses;
         private static bool _defaultIncludeProperties;
+        private static string _outputPath;
 
         /// <summary>
         /// Dictionary mapping some common XSD data types to corresponding OSA data types and formats, see
@@ -193,6 +196,7 @@ namespace OWL2OAS
                    {
                        _noImports = o.NoImports;
                        _server = o.Server;
+                       _outputPath = o.OutputPath;
                        if (o.FilePath != null)
                        {
                            _localOntology = true;
@@ -265,8 +269,7 @@ namespace OWL2OAS
             var serializerBuilder = new SerializerBuilder().DisableAliases();
             var serializer = serializerBuilder.Build();
             stringBuilder.AppendLine(serializer.Serialize(_document));
-            Console.WriteLine(stringBuilder);
-            Console.WriteLine("");
+            File.WriteAllText(_outputPath, stringBuilder.ToString());
         }
 
         private static OASDocument.Path GenerateLoadedOntologiesPath()
@@ -668,7 +671,7 @@ namespace OWL2OAS
                         }
                     }
                 }
-                _document.components.schemas.Add(classLabel, schema);
+                _document.components.schemas.Add(classLabel.Replace(":", "_", StringComparison.Ordinal), schema);
             }
         }
 
@@ -974,14 +977,14 @@ namespace OWL2OAS
             OASDocument.Schema itemSchema;
             if (requiredPropertiesForEachClass[classLabel].Count == 0)
             {
-                itemSchema = new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel));
+                itemSchema = new OASDocument.ReferenceSchema(classLabel);
             }
             else
             {
                 itemSchema = new OASDocument.AllOfSchema
                 {
                     allOf = new OASDocument.Schema[] {
-                        new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel)),
+                        new OASDocument.ReferenceSchema(classLabel),
                         new OASDocument.ComplexSchema {
                             required = requiredPropertiesForEachClass[classLabel].ToList()
                         }
@@ -994,7 +997,7 @@ namespace OWL2OAS
         private static OASDocument.Schema MergeAtomicSchemaWithContext(string classLabel)
         {
             OASDocument.AllOfSchema itemSchema = new OASDocument.AllOfSchema();
-            OASDocument.ReferenceSchema classSchema = new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel));
+            OASDocument.ReferenceSchema classSchema = new OASDocument.ReferenceSchema(classLabel);
             OASDocument.ReferenceSchema contextReferenceSchema = new OASDocument.ReferenceSchema("Context");
             OASDocument.ComplexSchema contextPropertySchema = new OASDocument.ComplexSchema
             {
@@ -1014,7 +1017,7 @@ namespace OWL2OAS
         private static OASDocument.Schema MergeAtomicSchemaWithContextAndRequiredProperties(string classLabel)
         {
             OASDocument.AllOfSchema itemSchema = new OASDocument.AllOfSchema();
-            OASDocument.ReferenceSchema classSchema = new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel));
+            OASDocument.ReferenceSchema classSchema = new OASDocument.ReferenceSchema(classLabel);
             OASDocument.ReferenceSchema contextReferenceSchema = new OASDocument.ReferenceSchema("Context");
             OASDocument.ComplexSchema contextPropertySchema = new OASDocument.ComplexSchema
             {
@@ -1075,7 +1078,7 @@ namespace OWL2OAS
             {
                 allOf = new OASDocument.Schema[] {
                         contextPropertySchema,
-                        new OASDocument.ReferenceSchema(HttpUtility.UrlEncode(classLabel)),
+                        new OASDocument.ReferenceSchema(classLabel),
                         new OASDocument.ComplexSchema {
                             minProperties = 2,
                             maxProperties = 2

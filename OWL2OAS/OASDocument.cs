@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 
@@ -219,7 +220,7 @@ namespace OWL2OAS
         {
             public ReferenceSchema(string referenceType)
             {
-                Reference = "#/components/schemas/" + referenceType;
+                Reference = "#/components/schemas/" + referenceType.Replace(":", "_", StringComparison.Ordinal);
             }
             [YamlMember(Alias = "$ref")]
             public string Reference { get; set; }
