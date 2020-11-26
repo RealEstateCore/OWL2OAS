@@ -23,6 +23,7 @@ namespace OWL2OAS.VocabularyHelper
     {
         public static readonly Uri label = new Uri("http://www.w3.org/2000/01/rdf-schema#label");
         public static readonly Uri Datatype = new Uri("http://www.w3.org/2000/01/rdf-schema#Datatype");
+        public static readonly Uri Literal = new Uri("http://www.w3.org/2000/01/rdf-schema#Literal");
     }
 
     public static class OWL
@@ -32,12 +33,14 @@ namespace OWL2OAS.VocabularyHelper
         public static readonly Uri FunctionalProperty = new Uri("http://www.w3.org/2002/07/owl#FunctionalProperty");
         public static readonly Uri versionIRI = new Uri("http://www.w3.org/2002/07/owl#versionIRI");
         public static readonly Uri deprecated = new Uri("http://www.w3.org/2002/07/owl#deprecated");
+        public static readonly Uri oneOf = new Uri("http://www.w3.org/2002/07/owl#oneOf");
 
         #region Restrictions
         public static readonly Uri onProperty = new Uri("http://www.w3.org/2002/07/owl#onProperty");
         public static readonly Uri onClass = new Uri("http://www.w3.org/2002/07/owl#onClass");
         public static readonly Uri cardinality = new Uri("http://www.w3.org/2002/07/owl#cardinality");
         public static readonly Uri qualifiedCardinality = new Uri("http://www.w3.org/2002/07/owl#qualifiedCardinality");
+        public static readonly Uri allValuesFrom = new Uri("http://www.w3.org/2002/07/owl#allValuesFrom");
         public static readonly Uri someValuesFrom = new Uri("http://www.w3.org/2002/07/owl#someValuesFrom");
         public static readonly Uri minCardinality = new Uri("http://www.w3.org/2002/07/owl#minCardinality");
         public static readonly Uri minQualifiedCardinality = new Uri("http://www.w3.org/2002/07/owl#minQualifiedCardinality");

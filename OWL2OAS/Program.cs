@@ -25,7 +25,7 @@ namespace OWL2OAS
         {
             [Option('c', "ClassInclusionPolicy", Default = EntityInclusionPolicy.DefaultInclude, HelpText = "Whether to include all classes by default (overridden by o2o:included annotation). Valid options: DefaultInclude or DefaultExclude.")]
             public EntityInclusionPolicy ClassInclusionPolicy { get; set; }
-            [Option('p', "PropertyInclusionPolicy", Default=EntityInclusionPolicy.DefaultInclude, HelpText = "Whether to include all properties by default (overridden by o2o:included annotation). Valid options: DefaultInclude or DefaultExclude.")]
+            [Option('p', "PropertyInclusionPolicy", Default = EntityInclusionPolicy.DefaultInclude, HelpText = "Whether to include all properties by default (overridden by o2o:included annotation). Valid options: DefaultInclude or DefaultExclude.")]
             public EntityInclusionPolicy PropertyInclusionPolicy { get; set; }
             [Option('n', "no-imports", Required = false, HelpText = "Sets program to not follow owl:Imports declarations.")]
             public bool NoImports { get; set; }
@@ -378,7 +378,7 @@ namespace OWL2OAS
                 }
             };
             // Add each prefix to the @context (sorting by shortname, e.g., dictionary value, for usability)
-            List<KeyValuePair<Uri,string>> prefixMappingsList = namespacePrefixes.ToList();
+            List<KeyValuePair<Uri, string>> prefixMappingsList = namespacePrefixes.ToList();
             prefixMappingsList.Sort((pair1, pair2) => string.CompareOrdinal(pair1.Value, pair2.Value));
             foreach (KeyValuePair<Uri, string> prefixMapping in prefixMappingsList)
             {
@@ -483,8 +483,11 @@ namespace OWL2OAS
 
         private static void GenerateAtomicClassSchemas()
         {
-            // Iterate over all classes
-            foreach (OntologyClass oClass in _ontologyGraph.OwlClasses.Where(oClass => oClass.IsNamed() && IsIncluded(oClass)))
+            // Iterate over all non-deprecated classes that are either explicitly included, or that have subclasses that are included
+            // The latter is to ensure that schema subsumption using allOf works
+            foreach (OntologyClass oClass in _ontologyGraph.OwlClasses.Where(oClass => oClass.IsNamed() &&
+                !oClass.IsDeprecated() &&
+                (IsIncluded(oClass) || oClass.SubClasses.Any(subClass => IsIncluded(subClass)))))
             {
                 // Get key name for API
                 string classLabel = GetKeyNameForResource(oClass);
@@ -496,10 +499,10 @@ namespace OWL2OAS
                 // Set up the required properties set, used in subsequently generating HTTP operations
                 requiredPropertiesForEachClass.Add(classLabel, new HashSet<string>());
 
-                // Iterate over superclasses, extract cardinality constraints from OWL restrictions
+                // Iterate over direct superclasses, extract cardinality constraints from local OWL restrictions
                 // This dictionary maps properties to the found constraints
-                Dictionary<IUriNode, PropertyCardinalityConstraints> constraints = new Dictionary<IUriNode, PropertyCardinalityConstraints>();
-                foreach (OntologyClass superClass in oClass.SuperClasses)
+                /*Dictionary<IUriNode, PropertyCardinalityConstraints> constraints = new Dictionary<IUriNode, PropertyCardinalityConstraints>();
+                foreach (OntologyClass superClass in oClass.DirectSuperClasses)
                 {
                     if (superClass.IsRestriction())
                     {
@@ -538,7 +541,7 @@ namespace OWL2OAS
                             constraints[constraintProperty] = pc;
                         }
                     }
-                }
+                }*/
 
                 // Add @id for all entries
                 OASDocument.PrimitiveSchema idSchema = new OASDocument.PrimitiveSchema();
@@ -562,115 +565,160 @@ namespace OWL2OAS
                 schema.properties.Add("label", labelSchema);
 
                 // Todo: refactor, break out majority of the foor loop into own method for clarity
-                IEnumerable<OntologyProperty> allUniqueProperties = oClass.IsExhaustiveDomainOfUniques();
-                foreach (OntologyProperty property in allUniqueProperties.Where(prop => IsIncluded(prop)))
+                //IEnumerable<OntologyProperty> allUniqueProperties = oClass.IsExhaustiveDomainOfUniques();
+                //Dictionary<OntologyProperty, OntologyClass> relationships = new Dictionary<OntologyProperty, OntologyClass>();
+
+                
+
+                //    .Union(oClass.IsScopedDomainOf());
+                /*foreach (OntologyProperty property in oClass.IsDomainOf.Where(prop => IsIncluded(prop)))
                 {
-                    // We only process (named) object and data properties with singleton ranges.
                     if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1)
                     {
-                        // Used for lookups against constraints dict
-                        UriNode propertyNode = ((UriNode)property.Resource);
+                        relationships.Add(property, property.Ranges.First());
+                    }
+                }*/
 
-                        // Used to allocate property to schema.properties dictionary
-                        string propertyLabel = GetKeyNameForResource(property);
+                /*IEnumerable<OntologyProperty> propertiesFromRdfsDomain = oClass.IsDomainOf.Where(
+                    property => IsIncluded(property) &&
+                    (property.IsObjectProperty() || property.IsDataProperty()) &&
+                    property.Ranges.Count() == 1 &&
+                    property.Ranges.First().IsNamed()
+                );*/
+                foreach (Relationship relationship in oClass.GetRelationships().Where(relationship =>
+                    IsIncluded(relationship.Property) &&
+                    (relationship.Property.IsObjectProperty() || relationship.Property.IsDataProperty()) &&
+                    !relationship.Property.IsDeprecated() &&
+                    !relationship.Target.IsDeprecated() &&
+                    !relationship.Target.IsOwlThing() &&
+                    !relationship.Target.IsRdfsLiteral()
+                ))
+                {
+                    OntologyClass range = relationship.Target;// property.Ranges.First();
+                    OntologyProperty property = relationship.Property;
 
-                        // The return value: a property block to be added to the output document
-                        OASDocument.Schema outputSchema;
+                    // Used for lookups against constraints dict
+                    UriNode propertyNode = ((UriNode)property.Resource);
 
-                        // Check if multiple values are allowed for this property. By default they are.
-                        bool propertyAllowsMultipleValues = true
-                            && (!constraints.ContainsKey(propertyNode) || !constraints[propertyNode].MaxOne())
-                            && !property.IsFunctional();
+                    // Used to allocate property to schema.properties dictionary
+                    string propertyLabel = GetKeyNameForResource(property);
 
-                        // If this is a data property
-                        if (property.IsDataProperty())
+                    // The return value: a property block to be added to the output document
+                    OASDocument.Schema outputSchema;
+
+                    // Check if multiple values are allowed for this property. By default they are.
+                    //bool propertyAllowsMultipleValues = !property.IsFunctional();
+
+                    // If this is a data property
+                    if (property.IsDataProperty())
+                    {
+                        // Set up the (possibly later on nested) property block
+                        OASDocument.PrimitiveSchema dataPropertySchema = new OASDocument.PrimitiveSchema();
+
+                        // Fall back to string representation for unknown types
+                        dataPropertySchema.type = "string";
+
+                        // Check that range is an XSD type that can be parsed into 
+                        // an OAS type and format (note: not all XSD types are covered)
+                        string rangeXsdType = ((UriNode)range.Resource).GetLocalName();
+                        if (xsdOsaMappings.ContainsKey(rangeXsdType))
                         {
-                            // Set up the (possibly later on nested) property block
-                            OASDocument.PrimitiveSchema dataPropertySchema = new OASDocument.PrimitiveSchema();
-
-                            // Fall back to string representation for unknown types
-                            dataPropertySchema.type = "string";
-
-                            // If range is named, check if it is an XSD type that can be parsed into 
-                            // an OAS type and format (note: not all XSD types are covered)
-                            if (property.Ranges.First().IsNamed()) { 
-                                string rangeXsdType = ((UriNode)property.Ranges.First().Resource).GetLocalName();
-                                if (xsdOsaMappings.ContainsKey(rangeXsdType))
-                                {
-                                    dataPropertySchema.type = xsdOsaMappings[rangeXsdType].Item1;
-                                    string format = xsdOsaMappings[rangeXsdType].Item2;
-                                    if (format.Length > 0)
-                                    {
-                                        dataPropertySchema.format = format;
-                                    }
-                                }
-                            }
-
-                            // Assign return value
-                            outputSchema = dataPropertySchema;
-                        }
-                        else
-                        {
-                            // This is an Object property
-                            // Set up the (possibly later on nested) property block
-                            OASDocument.Schema uriPropertySchema;
-
-                            // Set the type of the property; locally defined named classes can be either URI or full schema representation
-                            OntologyClass range = property.Ranges.First();
-                            if (range.IsNamed())
+                            dataPropertySchema.type = xsdOsaMappings[rangeXsdType].Item1;
+                            string format = xsdOsaMappings[rangeXsdType].Item2;
+                            if (format.Length > 0)
                             {
-                                uriPropertySchema = new OASDocument.ComplexSchema
-                                {
-                                    properties = new Dictionary<string, OASDocument.Schema> {
+                                dataPropertySchema.format = format;
+                            }
+                        }
+
+                        // Assign return value
+                        outputSchema = dataPropertySchema;
+                    }
+                    else
+                    {
+                        // This is an Object property
+                        // Set up the (possibly later on nested) property block
+                        OASDocument.Schema uriPropertySchema;
+
+                        // Set the type of the property; locally defined named classes can be either URI or full schema representation
+                        uriPropertySchema = new OASDocument.ComplexSchema
+                        {
+                            properties = new Dictionary<string, OASDocument.Schema> {
                                         { "@id", new OASDocument.PrimitiveSchema { type = "string" } },
                                         { "@type", new OASDocument.PrimitiveSchema { type = "string", DefaultValue = GetKeyNameForResource(range) } }
                                     },
-                                    required = new List<string> { "@id" }
-                                };
-                            }
-                            else
-                            {
-                                // Fall back to string representation (for more complex anoymous OWL constructs, e.g., intersections etc)
-                                uriPropertySchema = new OASDocument.PrimitiveSchema
-                                {
-                                    type = "string"
-                                };
-                            }
+                            required = new List<string> { "@id" }
+                        };
 
-                            outputSchema = uriPropertySchema;
-                        }
-
-                        // If this field allows multiple values (as is the default), wrap it in an array
-                        if (propertyAllowsMultipleValues)
-                        {
-                            OASDocument.ArraySchema propertyArraySchema = new OASDocument.ArraySchema();
-                            propertyArraySchema.items = outputSchema;
-                            // Assign constraints on the array, if any
-                            if (constraints.ContainsKey(propertyNode))
-                            {
-                                PropertyCardinalityConstraints pc = constraints[propertyNode];
-                                if (pc.min != 0)
-                                    propertyArraySchema.minItems = pc.min;
-                                if (pc.max != 0)
-                                    propertyArraySchema.maxItems = pc.max;
-                                if (pc.exactly != 0)
-                                    propertyArraySchema.maxItems = propertyArraySchema.minItems = pc.exactly;
-                            }
-                            schema.properties.Add(propertyLabel, propertyArraySchema);
-                        }
-                        else
-                        {
-                            // This is a single-valued property, assign it w/o the array
-                            schema.properties.Add(propertyLabel, outputSchema);
-                        }
-
-                        // Tag any min 1 or exactly 1 properties as required
-                        if (constraints.ContainsKey(propertyNode) && constraints[propertyNode].IsRequired())
-                        {
-                            requiredPropertiesForEachClass[classLabel].Add(propertyLabel);
-                        }
+                        outputSchema = uriPropertySchema;
                     }
+
+                    if (relationship.MinimumCount > 0) { 
+                        requiredPropertiesForEachClass[classLabel].Add(propertyLabel);
+                    }
+
+
+                    if (property.IsFunctional() || relationship.ExactCount == 1)
+                    {
+                        schema.properties[propertyLabel] = outputSchema;
+                    }
+                    else
+                    {
+                        OASDocument.ArraySchema propertyArraySchema = new OASDocument.ArraySchema();
+                        propertyArraySchema.items = outputSchema;
+                        if (relationship.MinimumCount.HasValue)
+                        {
+                            propertyArraySchema.minItems = relationship.MinimumCount.Value;
+                        }
+                        if (relationship.MaximumCount.HasValue)
+                        {
+                            propertyArraySchema.maxItems = relationship.MaximumCount.Value;
+                        }
+                        schema.properties[propertyLabel] = propertyArraySchema;
+
+                    }
+
+                    // If this field allows multiple values (as is the default), wrap it in an array
+                    /*if (!property.IsFunctional())
+                    {
+                        OASDocument.ArraySchema propertyArraySchema = new OASDocument.ArraySchema();
+                        propertyArraySchema.items = outputSchema;
+                        // Assign constraints on the array, if any
+                        /*if (constraints.ContainsKey(propertyNode))
+                        {
+                            PropertyCardinalityConstraints pc = constraints[propertyNode];
+                            if (pc.min != 0)
+                                propertyArraySchema.minItems = pc.min;
+                            if (pc.max != 0)
+                                propertyArraySchema.maxItems = pc.max;
+                            if (pc.exactly != 0)
+                                propertyArraySchema.maxItems = propertyArraySchema.minItems = pc.exactly;
+                        }
+                        schema.properties[propertyLabel] = propertyArraySchema;
+                    }
+                    else
+                    {
+                        // This is a single-valued property, assign it w/o the array
+                        schema.properties[propertyLabel] = outputSchema;
+                    }
+                    */
+                    // Tag any min 1 or exactly 1 properties as required
+                    /*if (constraints.ContainsKey(propertyNode) && constraints[propertyNode].IsRequired())
+                    {
+                        requiredPropertiesForEachClass[classLabel].Add(propertyLabel);
+                        Console.WriteLine("touched requiredPropertiesForEachClass! " + propertyLabel);
+                    }*/
                 }
+
+                /*IEnumerable<OntologyRestriction> classRestrictions = oClass.DirectSuperClasses
+                    .Where(superClass => superClass.IsRestriction())
+                    .Select(superClass => new OntologyRestriction(superClass));
+                foreach (OntologyRestriction restriction in classRestrictions.Where(restriction => !restriction.OnClass.IsOwlThing() && !restriction.OnClass.IsRdfsLiteral()))
+                {
+                    OntologyClass range = restriction.OnClass;
+                }*/
+                //IEnumerable<OntologyProperty> propertiesFromClassRestrictions = classRestrictions.Select(restriction => restriction.OnProperty);
+
                 _document.components.schemas.Add(classLabel.Replace(":", "_", StringComparison.Ordinal), schema);
             }
         }
@@ -713,7 +761,8 @@ namespace OWL2OAS
                 description = $"Id of '{classLabel}' to delete.",
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
-                schema = new OASDocument.PrimitiveSchema {
+                schema = new OASDocument.PrimitiveSchema
+                {
                     type = "string"
                 }
             };
@@ -902,7 +951,8 @@ namespace OWL2OAS
                             format = propertyFormat
                         };
                     }
-                    else {
+                    else
+                    {
                         propertySchema = new OASDocument.PrimitiveSchema
                         {
                             type = propertyType
@@ -946,7 +996,7 @@ namespace OWL2OAS
 
             // Generate schema with required fields propped on via allOf (if any required fields exist)
             OASDocument.Schema classSchemaWithRequiredProperties = MergeAtomicSchemaWithRequiredProperties(classLabel);
-            
+
             // Generate wrapper Hydra schema (https://www.hydra-cg.com/spec/latest/core/)
             OASDocument.Schema hydraSchema = new OASDocument.AllOfSchema
             {
@@ -1060,7 +1110,8 @@ namespace OWL2OAS
                 description = $"Id of '{classLabel}' to update.",
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
-                schema = new OASDocument.PrimitiveSchema {
+                schema = new OASDocument.PrimitiveSchema
+                {
                     type = "string"
                 }
             };
@@ -1102,7 +1153,7 @@ namespace OWL2OAS
                 }
             };
             patchOperation.requestBody = body;
-            
+
             // Create each of the HTTP response types
             OASDocument.Response response400 = new OASDocument.Response();
             response400.description = "Bad Request";
@@ -1143,7 +1194,8 @@ namespace OWL2OAS
                 description = $"Id of '{classLabel}' to update.",
                 InField = OASDocument.Parameter.InFieldValues.path,
                 required = true,
-                schema = new OASDocument.PrimitiveSchema {
+                schema = new OASDocument.PrimitiveSchema
+                {
                     type = "string"
                 }
             };
@@ -1234,7 +1286,8 @@ namespace OWL2OAS
                 exactQualifiedCardinalities.LiteralNodes().First().IsInteger())
             {
                 IEnumerable<IUriNode> qualifierClasses = restriction.GetNodesViaProperty(onClass).UriNodes();
-                if (qualifierClasses.Count() == 1 && qualifierClasses.First().Uri.Equals(VocabularyHelper.OWL.Thing)) { 
+                if (qualifierClasses.Count() == 1 && qualifierClasses.First().Uri.Equals(VocabularyHelper.OWL.Thing))
+                {
                     return int.Parse(exactQualifiedCardinalities.LiteralNodes().First().Value, invariantCulture);
                 }
             }
@@ -1278,7 +1331,8 @@ namespace OWL2OAS
         private static void LoadImport(Ontology importedOntology)
         {
             // We only deal with named ontologies
-            if (importedOntology.IsNamed()) {
+            if (importedOntology.IsNamed())
+            {
 
                 // Parse and load ontology from the stated import URI
                 Uri importUri = importedOntology.GetIri();
@@ -1304,7 +1358,7 @@ namespace OWL2OAS
 
                 // Only proceed if the retrieved ontology has an IRI
                 if (importedOntologyFromFetchedGraph.IsNamed())
-                { 
+                {
                     // Only proceed if we have not seen this fetched ontology before, otherwise we risk 
                     // unecessary fetches and computation, and possibly import loops.
                     // Note that importedOntologies uses a custom comparer from DotNetRdfExtensions, 

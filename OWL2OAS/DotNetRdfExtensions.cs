@@ -183,6 +183,11 @@ namespace OWL2OAS
         #endregion
 
         #region OntologyResource extensions
+        public static IEnumerable<INode> GetNodesViaPredicate(this OntologyResource resource, INode predicate)
+        {
+            return resource.Graph.GetTriplesWithSubjectPredicate(resource.Resource, predicate).Select(triple => triple.Object);
+        }
+
         public static bool IsNamed(this OntologyResource ontResource)
         {
             return ontResource.Resource.IsUri();
@@ -304,14 +309,62 @@ namespace OWL2OAS
         #endregion
 
         #region OntologyClass extensions
+        public static Uri GetUri(this OntologyResource ontResource)
+        {
+            return ontResource.GetUriNode().Uri;
+        }
+
+        public static bool IsOwlThing(this OntologyClass oClass)
+        {
+            return oClass.IsNamed() && oClass.GetUri().AbsoluteUri.Equals(VocabularyHelper.OWL.Thing.AbsoluteUri);
+        }
+
+        public static bool IsRdfsLiteral(this OntologyClass oClass)
+        {
+            return oClass.IsNamed() && oClass.GetUri().AbsoluteUri.Equals(VocabularyHelper.OWL.Thing.AbsoluteUri);
+        }
+        
+
         public static bool IsRdfsDatatype(this OntologyClass oClass)
         {
-            return oClass.Types.UriNodes().Any(classType => classType.Uri.Equals(VocabularyHelper.RDFS.Datatype));
+            return oClass.Types.UriNodes().Any(classType => classType.Uri.AbsoluteUri.Equals(VocabularyHelper.RDFS.Datatype.AbsoluteUri));
         }
 
         public static bool IsRestriction(this OntologyClass oClass)
         {
-            return oClass.Types.UriNodes().Any(classType => classType.Uri.Equals(VocabularyHelper.OWL.Restriction));
+            return oClass.Types.UriNodes().Any(classType => classType.Uri.AbsoluteUri.Equals(VocabularyHelper.OWL.Restriction.AbsoluteUri));
+        }
+
+        public static bool IsDatatype(this OntologyClass oClass)
+        {
+            return oClass.IsXsdDatatype() || oClass.Types.UriNodes().Any(classType => classType.Uri.AbsoluteUri.Equals(VocabularyHelper.RDFS.Datatype.AbsoluteUri));
+        }
+
+        public static bool IsEnumerationDatatype(this OntologyClass oClass)
+        {
+            INode oneOf = oClass.Graph.CreateUriNode(VocabularyHelper.OWL.oneOf);
+            if (oClass.IsDatatype())
+            {
+                if (oClass.EquivalentClasses.Count() == 1)
+                {
+                    return oClass.EquivalentClasses.Single().GetNodesViaPredicate(oneOf).Count() == 1;
+                }
+                else
+                {
+                    return oClass.GetNodesViaPredicate(oneOf).Count() == 1;
+                }
+            }
+
+            return false;
+        }
+
+        public static bool IsSimpleXsdWrapper(this OntologyClass oClass)
+        {
+            if (oClass.IsDatatype() && oClass.EquivalentClasses.Count() == 1)
+            {
+                return oClass.EquivalentClasses.Single().IsXsdDatatype();
+            }
+            return false;
         }
 
         public static bool HasRestrictionProperty(this OntologyClass oClass)
@@ -343,10 +396,9 @@ namespace OWL2OAS
         {
             OntologyGraph graph = cls.Graph as OntologyGraph;
             IUriNode onProperty = graph.CreateUriNode(new Uri("http://www.w3.org/2002/07/owl#onProperty"));
-            IEnumerable<IUriNode> propertyNodes = cls.SuperClasses.Where(superClass => superClass.IsRestriction())
+            IEnumerable<IUriNode> propertyNodes = cls.DirectSuperClasses.Where(superClass => superClass.IsRestriction())
                 .SelectMany(restriction => restriction.GetNodesViaProperty(onProperty)).UriNodes();
             return propertyNodes.Select(node => graph.CreateOntologyProperty(node));
-            //return propertyNodes.SelectMany(node => graph.OwlProperties.Where(oProperty => oProperty.Resource.Equals(node)));
         }
 
         public static IEnumerable<OntologyProperty> IsExhaustiveDomainOf(this OntologyClass oClass)
@@ -367,6 +419,103 @@ namespace OWL2OAS
             return allUniqueProperties;
         }
 
+        public static IEnumerable<Relationship> GetRelationships(this OntologyClass cls)
+        {
+            List<Relationship> relationships = new List<Relationship>();
+
+            // Start w/ rdfs:domain declarations. At this time we only consider no-range (i.e.,
+            // range is owl:Thing) or named singleton ranges
+            IEnumerable<OntologyProperty> rdfsDomainProperties = cls.IsDomainOf.Where(
+                property =>
+                    property.Ranges.Count() == 0 ||
+                    (property.Ranges.Count() == 1 && (property.Ranges.First().IsNamed() || property.Ranges.First().IsDatatype())));
+            foreach (OntologyProperty property in rdfsDomainProperties)
+            {
+                Relationship newRelationship;
+                if (property.Ranges.Count() == 0)
+                {
+                    OntologyGraph oGraph = cls.Graph as OntologyGraph;
+                    OntologyClass target;
+                    if (property.IsObjectProperty())
+                    {
+                        target = oGraph.CreateOntologyClass(VocabularyHelper.OWL.Thing);
+                    }
+                    else
+                    {
+                        target = oGraph.CreateOntologyClass(VocabularyHelper.RDFS.Literal);
+                    }
+                    newRelationship = new Relationship(property, target);
+                }
+                else
+                {
+                    OntologyClass range = property.Ranges.First();
+                    newRelationship = new Relationship(property, range);
+                }
+
+                if (property.IsFunctional())
+                {
+                    newRelationship.ExactCount = 1;
+                }
+
+                relationships.Add(newRelationship);
+            }
+
+            // Continue w/ OWL restrictions on the class
+            IEnumerable<OntologyRestriction> ontologyRestrictions = cls.DirectSuperClasses
+                .Where(superClass => superClass.IsRestriction())
+                .Select(superClass => new OntologyRestriction(superClass));
+            foreach (OntologyRestriction ontologyRestriction in ontologyRestrictions)
+            {
+
+
+                OntologyProperty restrictionProperty = ontologyRestriction.OnProperty;
+                OntologyClass restrictionClass = ontologyRestriction.OnClass;
+                if (restrictionProperty.IsNamed() && (restrictionClass.IsNamed() || restrictionClass.IsDatatype()))
+                {
+                    Relationship newRelationship = new Relationship(restrictionProperty, restrictionClass);
+
+                    int min = ontologyRestriction.MinimumCardinality;
+                    int exactly = ontologyRestriction.ExactCardinality;
+                    int max = ontologyRestriction.MaximumCardinality;
+
+                    if (min != 0)
+                        newRelationship.MinimumCount = min;
+                    if (exactly != 0)
+                        newRelationship.ExactCount = exactly;
+                    if (max != 0)
+                        newRelationship.MaximumCount = max;
+
+                    relationships.Add(newRelationship);
+                }
+            }
+
+            // Iterate over the gathered list of Relationships and narrow down to the most specific ones, using a Dictionary for lookup and the MergeWith() method for in-place narrowing
+            Dictionary<OntologyProperty, Relationship> relationshipsDict = new Dictionary<OntologyProperty, Relationship>(new OntologyResourceComparer());
+            foreach (Relationship relationship in relationships)
+            {
+                OntologyProperty property = relationship.Property;
+                OntologyResource target = relationship.Target;
+                // If we already have this property listed in the dictionary, first narrow down the relationship by combining it with the old copy
+                if (relationshipsDict.ContainsKey(property))
+                {
+                    Relationship oldRelationship = relationshipsDict[property];
+                    relationship.MergeWith(oldRelationship);
+                }
+                // Put relationship in the dictionary
+                relationshipsDict[property] = relationship;
+            }
+
+            // Return the values
+            return relationshipsDict.Values;
+        }
+
+        public static IEnumerable<OntologyClass> SuperClassesWithOwlThing(this OntologyClass cls)
+        {
+            IGraph graph = cls.Graph;
+            IUriNode owlThing = graph.CreateUriNode(VocabularyHelper.OWL.Thing);
+            OntologyClass owlThingClass = new OntologyClass(owlThing, graph);
+            return cls.SuperClasses.Append(owlThingClass);
+        }
         #endregion
 
         #region OntologyProperty extensions
