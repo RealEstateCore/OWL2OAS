@@ -22,6 +22,7 @@ namespace OWL2OAS.VocabularyHelper
     public static class RDFS
     {
         public static readonly Uri label = new Uri("http://www.w3.org/2000/01/rdf-schema#label");
+        public static readonly Uri subClassOf = new Uri("http://www.w3.org/2000/01/rdf-schema#subClassOf");
         public static readonly Uri Datatype = new Uri("http://www.w3.org/2000/01/rdf-schema#Datatype");
         public static readonly Uri Literal = new Uri("http://www.w3.org/2000/01/rdf-schema#Literal");
     }
@@ -34,6 +35,9 @@ namespace OWL2OAS.VocabularyHelper
         public static readonly Uri versionIRI = new Uri("http://www.w3.org/2002/07/owl#versionIRI");
         public static readonly Uri deprecated = new Uri("http://www.w3.org/2002/07/owl#deprecated");
         public static readonly Uri oneOf = new Uri("http://www.w3.org/2002/07/owl#oneOf");
+        public static readonly Uri annotatedSource = new Uri("http://www.w3.org/2002/07/owl#annotatedSource");
+        public static readonly Uri annotatedProperty = new Uri("http://www.w3.org/2002/07/owl#annotatedProperty");
+        public static readonly Uri annotatedTarget = new Uri("http://www.w3.org/2002/07/owl#annotatedTarget");
 
         #region Restrictions
         public static readonly Uri onProperty = new Uri("http://www.w3.org/2002/07/owl#onProperty");

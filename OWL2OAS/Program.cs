@@ -499,50 +499,6 @@ namespace OWL2OAS
                 // Set up the required properties set, used in subsequently generating HTTP operations
                 requiredPropertiesForEachClass.Add(classLabel, new HashSet<string>());
 
-                // Iterate over direct superclasses, extract cardinality constraints from local OWL restrictions
-                // This dictionary maps properties to the found constraints
-                /*Dictionary<IUriNode, PropertyCardinalityConstraints> constraints = new Dictionary<IUriNode, PropertyCardinalityConstraints>();
-                foreach (OntologyClass superClass in oClass.DirectSuperClasses)
-                {
-                    if (superClass.IsRestriction())
-                    {
-                        // Only proceed if the property restriction is well-formed, i.e., it actually has a property
-                        if (superClass.HasRestrictionProperty()) 
-                        {
-                            IUriNode constraintProperty = superClass.GetRestrictionProperty();
-
-                            // Extract prior constraints for property, if we've found any before;
-                            // otherwise create new constraints struct
-                            PropertyCardinalityConstraints pc;
-                            if (constraints.ContainsKey(constraintProperty))
-                            {
-                                pc = constraints[constraintProperty];
-                            }
-                            else
-                            {
-                                pc = new PropertyCardinalityConstraints();
-                            }
-
-                            // Extract cardinality from restriction class (in a well-formed ontology, 
-                            // only one of the below will be non-zero for each restriction)
-                            int min = GetMinCardinality(superClass);
-                            int exactly = GetExactCardinality(superClass);
-                            int max = GetMaxCardinality(superClass);
-
-                            // Update prior constraints with new values, if they are non-zero
-                            if (min != 0)
-                                pc.min = min;
-                            if (exactly != 0)
-                                pc.exactly = exactly;
-                            if (max != 0)
-                                pc.max = max;
-
-                            // Put the constraint back on the constraints dictionary
-                            constraints[constraintProperty] = pc;
-                        }
-                    }
-                }*/
-
                 // Add @id for all entries
                 OASDocument.PrimitiveSchema idSchema = new OASDocument.PrimitiveSchema();
                 idSchema.type = "string";
@@ -564,27 +520,7 @@ namespace OWL2OAS
                 labelSchema.type = "string";
                 schema.properties.Add("label", labelSchema);
 
-                // Todo: refactor, break out majority of the foor loop into own method for clarity
-                //IEnumerable<OntologyProperty> allUniqueProperties = oClass.IsExhaustiveDomainOfUniques();
-                //Dictionary<OntologyProperty, OntologyClass> relationships = new Dictionary<OntologyProperty, OntologyClass>();
-
-                
-
-                //    .Union(oClass.IsScopedDomainOf());
-                /*foreach (OntologyProperty property in oClass.IsDomainOf.Where(prop => IsIncluded(prop)))
-                {
-                    if ((property.IsObjectProperty() || property.IsDataProperty()) && property.Ranges.Count() == 1)
-                    {
-                        relationships.Add(property, property.Ranges.First());
-                    }
-                }*/
-
-                /*IEnumerable<OntologyProperty> propertiesFromRdfsDomain = oClass.IsDomainOf.Where(
-                    property => IsIncluded(property) &&
-                    (property.IsObjectProperty() || property.IsDataProperty()) &&
-                    property.Ranges.Count() == 1 &&
-                    property.Ranges.First().IsNamed()
-                );*/
+                // Iterate over all (local) relationships and add them as properties
                 foreach (Relationship relationship in oClass.GetRelationships().Where(relationship =>
                     IsIncluded(relationship.Property) &&
                     (relationship.Property.IsObjectProperty() || relationship.Property.IsDataProperty()) &&
@@ -677,53 +613,69 @@ namespace OWL2OAS
                         schema.properties[propertyLabel] = propertyArraySchema;
 
                     }
-
-                    // If this field allows multiple values (as is the default), wrap it in an array
-                    /*if (!property.IsFunctional())
-                    {
-                        OASDocument.ArraySchema propertyArraySchema = new OASDocument.ArraySchema();
-                        propertyArraySchema.items = outputSchema;
-                        // Assign constraints on the array, if any
-                        /*if (constraints.ContainsKey(propertyNode))
-                        {
-                            PropertyCardinalityConstraints pc = constraints[propertyNode];
-                            if (pc.min != 0)
-                                propertyArraySchema.minItems = pc.min;
-                            if (pc.max != 0)
-                                propertyArraySchema.maxItems = pc.max;
-                            if (pc.exactly != 0)
-                                propertyArraySchema.maxItems = propertyArraySchema.minItems = pc.exactly;
-                        }
-                        schema.properties[propertyLabel] = propertyArraySchema;
-                    }
-                    else
-                    {
-                        // This is a single-valued property, assign it w/o the array
-                        schema.properties[propertyLabel] = outputSchema;
-                    }
-                    */
-                    // Tag any min 1 or exactly 1 properties as required
-                    /*if (constraints.ContainsKey(propertyNode) && constraints[propertyNode].IsRequired())
-                    {
-                        requiredPropertiesForEachClass[classLabel].Add(propertyLabel);
-                        Console.WriteLine("touched requiredPropertiesForEachClass! " + propertyLabel);
-                    }*/
                 }
 
-                /*IEnumerable<OntologyRestriction> classRestrictions = oClass.DirectSuperClasses
-                    .Where(superClass => superClass.IsRestriction())
-                    .Select(superClass => new OntologyRestriction(superClass));
-                foreach (OntologyRestriction restriction in classRestrictions.Where(restriction => !restriction.OnClass.IsOwlThing() && !restriction.OnClass.IsRdfsLiteral()))
+                IUriNode rdfsSubClassOf = _ontologyGraph.CreateUriNode(VocabularyHelper.RDFS.subClassOf);
+                IEnumerable<OntologyClass> namedSuperClasses = oClass.DirectSuperClasses.Where(superClass =>
+                    superClass.IsNamed() &&
+                    !superClass.IsOwlThing() &&
+                    !superClass.IsDeprecated() &&
+                    !PropertyAssertionIsDeprecated(oClass.GetUriNode(), rdfsSubClassOf, superClass.GetUriNode())
+                );
+                if (namedSuperClasses.Any())
                 {
-                    OntologyClass range = restriction.OnClass;
-                }*/
-                //IEnumerable<OntologyProperty> propertiesFromClassRestrictions = classRestrictions.Select(restriction => restriction.OnProperty);
-
-                _document.components.schemas.Add(classLabel.Replace(":", "_", StringComparison.Ordinal), schema);
+                    OASDocument.AllOfSchema inheritanceSchema = new OASDocument.AllOfSchema();
+                    OASDocument.Schema[] superClassSchemaReferences = namedSuperClasses.Select(superClass => new OASDocument.ReferenceSchema(GetKeyNameForResource(superClass))).ToArray();
+                    inheritanceSchema.allOf = new OASDocument.Schema[namedSuperClasses.Count() + 1];
+                    for (int i = 0; i < namedSuperClasses.Count(); i++)
+                    {
+                        inheritanceSchema.allOf[i] = superClassSchemaReferences[i];
+                    }
+                    inheritanceSchema.allOf[namedSuperClasses.Count()] = schema;
+                    _document.components.schemas.Add(classLabel.Replace(":", "_", StringComparison.Ordinal), inheritanceSchema);
+                }
+                else
+                {
+                    _document.components.schemas.Add(classLabel.Replace(":", "_", StringComparison.Ordinal), schema);
+                }
             }
         }
 
-        private static void GenerateClassPaths()
+        // TODO: move this into the DotNetRdfExtensions class
+        private static bool PropertyAssertionIsDeprecated(INode subj, IUriNode pred, INode obj)
+        {
+            IUriNode owlAnnotatedSource = _ontologyGraph.CreateUriNode(VocabularyHelper.OWL.annotatedSource);
+            IUriNode owlAnnotatedProperty = _ontologyGraph.CreateUriNode(VocabularyHelper.OWL.annotatedProperty);
+            IUriNode owlAnnotatedTarget = _ontologyGraph.CreateUriNode(VocabularyHelper.OWL.annotatedTarget);
+            IUriNode owlDeprecated = _ontologyGraph.CreateUriNode(VocabularyHelper.OWL.deprecated);
+
+            IEnumerable<INode> axiomAnnotations = _ontologyGraph.Nodes
+                .Where(node => _ontologyGraph.ContainsTriple(new Triple(node, owlAnnotatedSource, subj)))
+                .Where(node => _ontologyGraph.ContainsTriple(new Triple(node, owlAnnotatedProperty, pred)))
+                .Where(node => _ontologyGraph.ContainsTriple(new Triple(node, owlAnnotatedTarget, obj)));
+
+            foreach (INode axiomAnnotation in axiomAnnotations)
+            {
+                foreach (Triple deprecationAssertion in _ontologyGraph.GetTriplesWithSubjectPredicate(axiomAnnotation, owlDeprecated).Where(trip => trip.Object.NodeType == NodeType.Literal))
+                {
+                    IValuedNode deprecationValue = deprecationAssertion.Object.AsValuedNode();
+                    try
+                    {
+                        if (deprecationValue.AsBoolean())
+                        {
+                            return true;
+                        }
+                    }
+                    catch
+                    {
+
+                    }
+                }
+            }
+            return false;
+        }
+
+            private static void GenerateClassPaths()
         {
             // Iterate over all classes
             foreach (OntologyClass oClass in _ontologyGraph.OwlClasses.Where(oClass => oClass.IsNamed() && IsIncluded(oClass)))
