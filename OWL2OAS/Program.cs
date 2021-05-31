@@ -556,14 +556,22 @@ namespace OWL2OAS
 
                         // Check that range is an XSD type that can be parsed into 
                         // an OAS type and format (note: not all XSD types are covered)
-                        string rangeXsdType = ((UriNode)range.Resource).GetLocalName();
-                        if (xsdOsaMappings.ContainsKey(rangeXsdType))
-                        {
-                            dataPropertySchema.type = xsdOsaMappings[rangeXsdType].Item1;
-                            string format = xsdOsaMappings[rangeXsdType].Item2;
-                            if (format.Length > 0)
+                        if (range.IsXsdDatatype() || range.IsSimpleXsdWrapper()) {
+                            string rangeXsdType = "";
+                            if (range.IsXsdDatatype()) {
+                                rangeXsdType = ((UriNode)range.Resource).GetLocalName();
+                            }
+                            else {
+                                rangeXsdType = range.EquivalentClasses.First().GetUriNode().GetLocalName();
+                            }
+                            if (xsdOsaMappings.ContainsKey(rangeXsdType))
                             {
-                                dataPropertySchema.format = format;
+                                dataPropertySchema.type = xsdOsaMappings[rangeXsdType].Item1;
+                                string format = xsdOsaMappings[rangeXsdType].Item2;
+                                if (format.Length > 0)
+                                {
+                                    dataPropertySchema.format = format;
+                                }
                             }
                         }
 
@@ -853,15 +861,27 @@ namespace OWL2OAS
                 string propertyType = "string";
                 string propertyFormat = "";
 
-                // If range is named, check if it is an XSD type that can be parsed into 
+                // Check that range is an XSD type that can be parsed into 
                 // an OAS type and format (note: not all XSD types are covered)
-                if (property.Ranges.First().IsNamed())
-                {
-                    string rangeXsdType = ((UriNode)property.Ranges.First().Resource).GetLocalName();
-                    if (xsdOsaMappings.ContainsKey(rangeXsdType))
-                    {
-                        propertyType = xsdOsaMappings[rangeXsdType].Item1;
-                        propertyFormat = xsdOsaMappings[rangeXsdType].Item2;
+                OntologyClass range = property.Ranges.First();
+                if (range.IsNamed()) {
+                    if (range.IsXsdDatatype() || range.IsSimpleXsdWrapper()) {
+                        string rangeXsdType = "";
+                        if (range.IsXsdDatatype()) {
+                            rangeXsdType = ((UriNode)range.Resource).GetLocalName();
+                        }
+                        else {
+                            rangeXsdType = range.EquivalentClasses.First().GetUriNode().GetLocalName();
+                        }
+                        if (xsdOsaMappings.ContainsKey(rangeXsdType))
+                        {
+                            propertyType = xsdOsaMappings[rangeXsdType].Item1;
+                            string format = xsdOsaMappings[rangeXsdType].Item2;
+                            if (format.Length > 0)
+                            {
+                                propertyFormat = format;
+                            }
+                        }
                     }
                 }
 
